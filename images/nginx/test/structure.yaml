@@ -1,0 +1,58 @@
+# Container structure tests for CascadeGuard Nginx image
+# https://github.com/GoogleContainerTools/container-structure-test
+
+schemaVersion: "2.0.0"
+
+metadataTest:
+  user: "nonroot"
+  workdir: "/usr/share/nginx/html"
+  entrypoint: ["nginx"]
+  cmd: ["-g", "daemon off;"]
+  exposedPorts: ["8080"]
+
+commandTests:
+  - name: "Nginx is installed and accessible"
+    command: "nginx"
+    args: ["-v"]
+    expectedError: ["nginx version:"]
+    exitCode: 0
+
+  - name: "nonroot user exists with UID 65532"
+    command: "id"
+    args: ["nonroot"]
+    expectedOutput: ["uid=65532"]
+    exitCode: 0
+
+  - name: "Nginx listens on port 8080 (non-privileged)"
+    command: "grep"
+    args: ["-r", "8080", "/etc/nginx/conf.d/"]
+    expectedOutput: ["8080"]
+    exitCode: 0
+
+  - name: "curl is not installed"
+    command: "which"
+    args: ["curl"]
+    exitCode: 1
+
+fileExistenceTests:
+  - name: "Default index.html exists"
+    path: "/usr/share/nginx/html/index.html"
+    shouldExist: true
+
+  - name: "Nginx config exists"
+    path: "/etc/nginx/nginx.conf"
+    shouldExist: true
+
+  - name: "Cache directory exists and is writable"
+    path: "/var/cache/nginx"
+    shouldExist: true
+    isDir: true
+
+  - name: "No man pages"
+    path: "/usr/share/man/man1"
+    shouldExist: false
+
+fileContentTests:
+  - name: "Default page contains CascadeGuard"
+    path: "/usr/share/nginx/html/index.html"
+    expectedContents: ["CascadeGuard"]

@@ -1,0 +1,69 @@
+# Container structure tests for CascadeGuard Node.js 20 image
+# https://github.com/GoogleContainerTools/container-structure-test
+
+schemaVersion: "2.0.0"
+
+metadataTest:
+  user: "nonroot"
+  workdir: "/app"
+  entrypoint: ["node"]
+  cmd: ["--version"]
+
+commandTests:
+  - name: "Node.js 20 is installed and accessible"
+    command: "node"
+    args: ["--version"]
+    expectedOutput: ["v20\\."]
+    exitCode: 0
+
+  - name: "npm is installed and accessible"
+    command: "npm"
+    args: ["--version"]
+    expectedOutput: ["\\d+\\.\\d+"]
+    exitCode: 0
+
+  - name: "nonroot user exists with UID 65532"
+    command: "id"
+    args: ["nonroot"]
+    expectedOutput: ["uid=65532"]
+    exitCode: 0
+
+  - name: "bash is not available"
+    command: "which"
+    args: ["bash"]
+    exitCode: 1
+
+  - name: "curl is not installed"
+    command: "which"
+    args: ["curl"]
+    exitCode: 1
+
+  - name: "wget is not installed"
+    command: "which"
+    args: ["wget"]
+    exitCode: 1
+
+  - name: "gcc is not installed"
+    command: "which"
+    args: ["gcc"]
+    exitCode: 1
+
+  - name: "corepack is removed"
+    command: "which"
+    args: ["corepack"]
+    exitCode: 1
+
+fileExistenceTests:
+  - name: "/app directory exists"
+    path: "/app"
+    shouldExist: true
+    isDir: true
+
+  - name: "No man pages"
+    path: "/usr/share/man/man1"
+    shouldExist: false
+
+fileContentTests:
+  - name: "/etc/shells only contains /bin/sh"
+    path: "/etc/shells"
+    expectedContents: ["/bin/sh"]

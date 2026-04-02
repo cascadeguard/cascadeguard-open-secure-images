@@ -1,0 +1,59 @@
+# Container structure tests for CascadeGuard Alpine image
+# https://github.com/GoogleContainerTools/container-structure-test
+
+schemaVersion: "2.0.0"
+
+metadataTest:
+  user: "nonroot"
+  workdir: "/app"
+  cmd: ["/bin/sh"]
+
+commandTests:
+  - name: "nonroot user exists with UID 65532"
+    command: "id"
+    args: ["nonroot"]
+    expectedOutput: ["uid=65532"]
+    exitCode: 0
+
+  - name: "/bin/sh is available"
+    command: "/bin/sh"
+    args: ["-c", "echo ok"]
+    expectedOutput: ["ok"]
+    exitCode: 0
+
+  - name: "bash is not available"
+    command: "which"
+    args: ["bash"]
+    exitCode: 1
+
+  - name: "curl is not installed"
+    command: "which"
+    args: ["curl"]
+    exitCode: 1
+
+  - name: "wget is not installed"
+    command: "which"
+    args: ["wget"]
+    exitCode: 1
+
+  - name: "No SUID binaries exist"
+    command: "/bin/sh"
+    args: ["-c", "find / -perm /4000 -type f 2>/dev/null | wc -l"]
+    expectedOutput: ["0"]
+    exitCode: 0
+
+  - name: "games user removed"
+    command: "/bin/sh"
+    args: ["-c", "! grep -q ^games: /etc/passwd"]
+    exitCode: 0
+
+fileExistenceTests:
+  - name: "/app directory exists"
+    path: "/app"
+    shouldExist: true
+    isDir: true
+
+  - name: "No apk cache"
+    path: "/var/cache/apk"
+    shouldExist: true
+    isDir: true

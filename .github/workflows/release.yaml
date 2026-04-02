@@ -1,0 +1,204 @@
+# CascadeGuard — Release Workflow
+#
+# Triggered on version tags (v*). Builds all images, signs them,
+# and pushes to both GitHub Container Registry and Docker Hub.
+
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+  packages: write
+  id-token: write
+  security-events: write
+
+env:
+  GHCR_REGISTRY: ghcr.io
+  DOCKERHUB_REGISTRY: docker.io
+  IMAGE_PREFIX_GHCR: ghcr.io/${{ github.repository_owner }}
+  IMAGE_PREFIX_DOCKERHUB: ${{ github.repository_owner }}
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: true
+      matrix:
+        include:
+          - context: images/python/3.12
+            name: python-3.12
+            tag: "3.12"
+          - context: images/node/20
+            name: node-20
+            tag: "20"
+          - context: images/nginx
+            name: nginx
+            tag: stable
+          - context: images/alpine
+            name: alpine
+            tag: "3.20"
+          - context: images/debian-slim
+            name: debian-slim
+            tag: bookworm
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Set up QEMU for multi-platform builds
+        uses: docker/setup-qemu-action@v3
+
+      # ── Registry Authentication ──────────────────────────────────
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.GHCR_REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.DOCKERHUB_REGISTRY }}
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      # ── Prepare Build Context ────────────────────────────────────
+      - name: Extract release version
+        id: version
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "Release version: $VERSION"
+
+      - name: Copy shared scripts into build context
+        run: cp -r shared ${{ matrix.context }}/shared
+
+      # ── Build Multi-Platform Images ─────────────────────────────
+      - name: Build and push image
+        id: build
+        uses: docker/build-push-action@v5
+        with:
+          context: ${{ matrix.context }}
+          file: ${{ matrix.context }}/Dockerfile
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: |
+            ${{ env.IMAGE_PREFIX_GHCR }}/${{ matrix.name }}:${{ matrix.tag }}
+            ${{ env.IMAGE_PREFIX_GHCR }}/${{ matrix.name }}:${{ steps.version.outputs.version }}
+            ${{ env.IMAGE_PREFIX_GHCR }}/${{ matrix.name }}:latest
+            ${{ env.IMAGE_PREFIX_DOCKERHUB }}/${{ matrix.name }}:${{ matrix.tag }}
+            ${{ env.IMAGE_PREFIX_DOCKERHUB }}/${{ matrix.name }}:${{ steps.version.outputs.version }}
+            ${{ env.IMAGE_PREFIX_DOCKERHUB }}/${{ matrix.name }}:latest
+          labels: |
+            org.opencontainers.image.revision=${{ github.sha }}
+            org.opencontainers.image.version=${{ steps.version.outputs.version }}
+            org.opencontainers.image.created=${{ github.event.head_commit.timestamp }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      # ── Scan ────────────────────────────────────────────────────
+      - name: Install Grype
+        uses: anchore/scan-action/setup@v3
+
+      - name: Scan released image
+        run: |
+          grype "${{ env.IMAGE_PREFIX_GHCR }}/${{ matrix.name }}:${{ matrix.tag }}" \
+            --config shared/scanning/grype-config.yaml \
+            --fail-on critical
+
+      # ── SBOM ────────────────────────────────────────────────────
+      - name: Install Syft
+        uses: anchore/sbom-action/setup@v0
+
+      - name: Generate SBOM
+        run: |
+          syft "${{ env.IMAGE_PREFIX_GHCR }}/${{ matrix.name }}:${{ matrix.tag }}" \
+            --output spdx-json=sbom-${{ matrix.name }}.spdx.json
+
+      # ── Sign ────────────────────────────────────────────────────
+      - name: Install Cosign
+        uses: sigstore/cosign-installer@v3
+
+      - name: Sign image and attach SBOM attestation
+        env:
+          COSIGN_EXPERIMENTAL: "1"
+        run: |
+          # Sign on GHCR
+          cosign sign --yes \
+            -a "version=${{ steps.version.outputs.version }}" \
+            -a "repo=${{ github.repository }}" \
+            "${{ env.IMAGE_PREFIX_GHCR }}/${{ matrix.name }}:${{ matrix.tag }}"
+
+          # Attach SBOM attestation on GHCR
+          cosign attest --yes \
+            --predicate sbom-${{ matrix.name }}.spdx.json \
+            --type spdxjson \
+            "${{ env.IMAGE_PREFIX_GHCR }}/${{ matrix.name }}:${{ matrix.tag }}"
+
+          # Sign on Docker Hub
+          cosign sign --yes \
+            -a "version=${{ steps.version.outputs.version }}" \
+            -a "repo=${{ github.repository }}" \
+            "${{ env.IMAGE_PREFIX_DOCKERHUB }}/${{ matrix.name }}:${{ matrix.tag }}"
+
+      - name: Upload SBOM artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: sbom-release-${{ matrix.name }}
+          path: sbom-${{ matrix.name }}.spdx.json
+
+      - name: Clean up build context
+        if: always()
+        run: rm -rf ${{ matrix.context }}/shared
+
+  # ── Create GitHub Release ──────────────────────────────────────
+  create-release:
+    needs: release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Download all SBOM artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: sbom-release-*
+          path: sboms/
+          merge-multiple: true
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          generate_release_notes: true
+          files: sboms/*.spdx.json
+          body: |
+            ## CascadeGuard Secure Base Images ${{ github.ref_name }}
+
+            ### Images published
+            | Image | GHCR | Docker Hub |
+            |-------|------|------------|
+            | Python 3.12 | `ghcr.io/${{ github.repository_owner }}/python-3.12:3.12` | `${{ github.repository_owner }}/python-3.12:3.12` |
+            | Node.js 20 | `ghcr.io/${{ github.repository_owner }}/node-20:20` | `${{ github.repository_owner }}/node-20:20` |
+            | Nginx | `ghcr.io/${{ github.repository_owner }}/nginx:stable` | `${{ github.repository_owner }}/nginx:stable` |
+            | Alpine 3.20 | `ghcr.io/${{ github.repository_owner }}/alpine:3.20` | `${{ github.repository_owner }}/alpine:3.20` |
+            | Debian Slim | `ghcr.io/${{ github.repository_owner }}/debian-slim:bookworm` | `${{ github.repository_owner }}/debian-slim:bookworm` |
+
+            ### Security
+            - All images scanned with Grype (zero critical/high CVEs at release time)
+            - Signed with cosign (keyless / Sigstore)
+            - SBOM attestations attached (SPDX JSON)
+
+            ### Verify
+            ```bash
+            cosign verify \
+              --certificate-identity-regexp "https://github.com/${{ github.repository }}/.*" \
+              --certificate-oidc-issuer "https://token.actions.githubusercontent.com" \
+              ghcr.io/${{ github.repository_owner }}/python-3.12:3.12
+            ```

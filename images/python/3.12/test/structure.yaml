@@ -1,0 +1,79 @@
+# Container structure tests for CascadeGuard Python 3.12 image
+# https://github.com/GoogleContainerTools/container-structure-test
+
+schemaVersion: "2.0.0"
+
+metadataTest:
+  user: "nonroot"
+  workdir: "/app"
+  entrypoint: ["python3"]
+  cmd: ["--version"]
+
+commandTests:
+  - name: "Python 3.12 is installed and accessible"
+    command: "python3"
+    args: ["--version"]
+    expectedOutput: ["Python 3\\.12\\."]
+    exitCode: 0
+
+  - name: "pip is installed and accessible"
+    command: "pip"
+    args: ["--version"]
+    expectedOutput: ["pip"]
+    exitCode: 0
+
+  - name: "nonroot user exists with UID 65532"
+    command: "id"
+    args: ["nonroot"]
+    expectedOutput: ["uid=65532"]
+    exitCode: 0
+
+  - name: "bash is not available"
+    command: "which"
+    args: ["bash"]
+    exitCode: 1
+
+  - name: "no extra shells in /bin"
+    command: "ls"
+    args: ["/bin/bash"]
+    exitCode: 2
+
+  - name: "curl is not installed"
+    command: "which"
+    args: ["curl"]
+    exitCode: 1
+
+  - name: "wget is not installed"
+    command: "which"
+    args: ["wget"]
+    exitCode: 1
+
+  - name: "gcc is not installed"
+    command: "which"
+    args: ["gcc"]
+    exitCode: 1
+
+fileExistenceTests:
+  - name: "/app directory exists"
+    path: "/app"
+    shouldExist: true
+    isDir: true
+
+  - name: "No apt lists remain"
+    path: "/var/lib/apt/lists"
+    shouldExist: true
+    isDir: true
+
+  - name: "No documentation in /usr/share/doc"
+    path: "/usr/share/doc"
+    shouldExist: true
+    isDir: true
+
+  - name: "No man pages"
+    path: "/usr/share/man/man1"
+    shouldExist: false
+
+fileContentTests:
+  - name: "/etc/shells only contains /bin/sh"
+    path: "/etc/shells"
+    expectedContents: ["/bin/sh"]

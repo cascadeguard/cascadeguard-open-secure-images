@@ -1,0 +1,146 @@
+# CascadeGuard Allowed Packages Policy
+#
+# Per-image allowlists of expected packages. Any package found during
+# scanning that is NOT on this list triggers a review. This helps detect
+# supply-chain injection or unintended dependency drift.
+
+apiVersion: cascadeguard.dev/v1
+kind: AllowedPackagesPolicy
+metadata:
+  name: cascadeguard-allowed-packages
+  description: "Package allowlists for CascadeGuard hardened base images"
+  version: "1.0.0"
+  lastReviewed: "2026-03-15"
+
+spec:
+  images:
+    # ── Python 3.12 ──────────────────────────────────────────────
+    python-3.12:
+      base: "python:3.12-slim"
+      allowedPackages:
+        - name: "python3.12"
+          reason: "Core runtime"
+        - name: "libpython3.12-stdlib"
+          reason: "Python standard library"
+        - name: "libpython3.12-minimal"
+          reason: "Minimal Python shared library"
+        - name: "pip"
+          reason: "Python package installer"
+        - name: "setuptools"
+          reason: "Python build tool (required by pip)"
+        - name: "libc6"
+          reason: "GNU C Library"
+        - name: "libssl3"
+          reason: "OpenSSL shared library"
+        - name: "zlib1g"
+          reason: "Compression library"
+        - name: "libsqlite3-0"
+          reason: "SQLite shared library (Python stdlib dependency)"
+        - name: "libffi8"
+          reason: "Foreign function interface library"
+        - name: "libexpat1"
+          reason: "XML parsing library"
+        - name: "libreadline8"
+          reason: "GNU readline library"
+        - name: "libbz2-1.0"
+          reason: "bzip2 compression library"
+        - name: "liblzma5"
+          reason: "LZMA compression library"
+
+    # ── Node.js 20 ───────────────────────────────────────────────
+    node-20:
+      base: "node:20-slim"
+      allowedPackages:
+        - name: "nodejs"
+          reason: "Core runtime"
+        - name: "npm"
+          reason: "Node package manager"
+        - name: "libc6"
+          reason: "GNU C Library"
+        - name: "libssl3"
+          reason: "OpenSSL shared library"
+        - name: "libstdc++6"
+          reason: "C++ standard library"
+        - name: "libgcc-s1"
+          reason: "GCC support library"
+        - name: "zlib1g"
+          reason: "Compression library"
+        - name: "libbrotli1"
+          reason: "Brotli compression (used by Node HTTP)"
+        - name: "libicu72"
+          reason: "ICU internationalization library"
+
+    # ── Nginx ────────────────────────────────────────────────────
+    nginx:
+      base: "nginx:stable-alpine-slim"
+      allowedPackages:
+        - name: "nginx"
+          reason: "Core web server"
+        - name: "musl"
+          reason: "Alpine C library"
+        - name: "pcre2"
+          reason: "Regular expression library (nginx dependency)"
+        - name: "zlib"
+          reason: "Compression library"
+        - name: "libssl3"
+          reason: "OpenSSL shared library"
+        - name: "libcrypto3"
+          reason: "OpenSSL crypto library"
+
+    # ── Alpine 3.20 ──────────────────────────────────────────────
+    alpine:
+      base: "alpine:3.20"
+      allowedPackages:
+        - name: "musl"
+          reason: "Alpine C library"
+        - name: "musl-utils"
+          reason: "musl utility programs"
+        - name: "busybox"
+          reason: "Core Unix utilities"
+        - name: "alpine-baselayout"
+          reason: "Alpine filesystem layout"
+        - name: "alpine-keys"
+          reason: "Alpine package signing keys"
+        - name: "apk-tools"
+          reason: "Alpine package manager"
+        - name: "ca-certificates-bundle"
+          reason: "Root CA certificates"
+        - name: "libssl3"
+          reason: "OpenSSL shared library"
+        - name: "libcrypto3"
+          reason: "OpenSSL crypto library"
+        - name: "zlib"
+          reason: "Compression library"
+
+    # ── Debian Slim (Bookworm) ───────────────────────────────────
+    debian-slim:
+      base: "debian:bookworm-slim"
+      allowedPackages:
+        - name: "base-files"
+          reason: "Debian base filesystem"
+        - name: "libc6"
+          reason: "GNU C Library"
+        - name: "libssl3"
+          reason: "OpenSSL shared library"
+        - name: "zlib1g"
+          reason: "Compression library"
+        - name: "dash"
+          reason: "/bin/sh implementation"
+        - name: "coreutils"
+          reason: "Core Unix utilities"
+        - name: "ca-certificates"
+          reason: "Root CA certificates"
+        - name: "tzdata"
+          reason: "Timezone data"
+        - name: "libc-bin"
+          reason: "GNU C library binaries"
+        - name: "debianutils"
+          reason: "Debian-specific utilities"
+        - name: "login"
+          reason: "Login utilities"
+        - name: "adduser"
+          reason: "User management utilities"
+
+  # Action when an unexpected package is detected
+  unexpectedPackageAction: "warn"
+  # Set to "block" to fail builds on unexpected packages

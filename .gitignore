@@ -1,0 +1,62 @@
+# ── Build artifacts ───────────────────────────────────────────────────
+*.tar
+*.tar.gz
+*.tgz
+*.img
+build/
+dist/
+out/
+
+# ── Docker ───────────────────────────────────────────────────────────
+.docker/
+docker-compose.override.yml
+
+# ── Environment and secrets ──────────────────────────────────────────
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.crt
+*.p12
+cosign.key
+cosign.pub
+
+# ── IDE and editor ───────────────────────────────────────────────────
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# ── OS files ─────────────────────────────────────────────────────────
+.DS_Store
+._*
+.Spotlight-V100
+.Trashes
+
+# ── Scan results (generated locally, not committed) ─────────────────
+*.sarif
+grype-results.*
+trivy-results.*
+sbom*.json
+
+# ── Temporary files ──────────────────────────────────────────────────
+tmp/
+*.tmp
+*.bak
+*.log
+
+# ── Python (if running any helper scripts) ───────────────────────────
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+
+# ── Node (if running any helper scripts) ─────────────────────────────
+node_modules/
+package-lock.json
+yarn.lock

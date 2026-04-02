@@ -1,0 +1,187 @@
+# CascadeGuard — Scheduled Vulnerability Scan
+#
+# Runs daily to scan all published images for newly disclosed CVEs.
+# Opens GitHub issues when new vulnerabilities are found.
+
+name: Scheduled Vulnerability Scan
+
+on:
+  schedule:
+    # Run every day at 06:00 UTC
+    - cron: "0 6 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: read
+  issues: write
+  security-events: write
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_PREFIX: ghcr.io/${{ github.repository_owner }}
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        image:
+          - name: python-3.12
+            tag: "3.12"
+          - name: node-20
+            tag: "20"
+          - name: nginx
+            tag: stable
+          - name: alpine
+            tag: "3.20"
+          - name: debian-slim
+            tag: bookworm
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Pull published image
+        run: |
+          docker pull "${{ env.IMAGE_PREFIX }}/${{ matrix.image.name }}:${{ matrix.image.tag }}" || {
+            echo "::warning::Image ${{ matrix.image.name }}:${{ matrix.image.tag }} not found in registry. Skipping."
+            exit 0
+          }
+
+      # ── Grype Scan ──────────────────────────────────────────────
+      - name: Install Grype
+        uses: anchore/scan-action/setup@v3
+
+      - name: Scan with Grype
+        id: grype
+        run: |
+          IMAGE="${{ env.IMAGE_PREFIX }}/${{ matrix.image.name }}:${{ matrix.image.tag }}"
+          grype "$IMAGE" \
+            --config shared/scanning/grype-config.yaml \
+            --output json \
+            --file grype-results.json || true
+
+          grype "$IMAGE" \
+            --config shared/scanning/grype-config.yaml \
+            --output sarif \
+            --file grype-results.sarif || true
+
+          # Extract counts
+          CRITICAL=$(jq '[.matches[] | select(.vulnerability.severity == "Critical")] | length' grype-results.json 2>/dev/null || echo 0)
+          HIGH=$(jq '[.matches[] | select(.vulnerability.severity == "High")] | length' grype-results.json 2>/dev/null || echo 0)
+          MEDIUM=$(jq '[.matches[] | select(.vulnerability.severity == "Medium")] | length' grype-results.json 2>/dev/null || echo 0)
+          TOTAL=$(jq '.matches | length' grype-results.json 2>/dev/null || echo 0)
+
+          echo "critical=$CRITICAL" >> "$GITHUB_OUTPUT"
+          echo "high=$HIGH" >> "$GITHUB_OUTPUT"
+          echo "medium=$MEDIUM" >> "$GITHUB_OUTPUT"
+          echo "total=$TOTAL" >> "$GITHUB_OUTPUT"
+
+      - name: Upload Grype SARIF
+        if: always()
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: grype-results.sarif
+        continue-on-error: true
+
+      # ── Trivy Scan (secondary scanner) ──────────────────────────
+      - name: Install Trivy
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: "${{ env.IMAGE_PREFIX }}/${{ matrix.image.name }}:${{ matrix.image.tag }}"
+          format: "json"
+          output: "trivy-results.json"
+          severity: "CRITICAL,HIGH"
+        continue-on-error: true
+
+      # ── Open Issue on New CVEs ──────────────────────────────────
+      - name: Open issue if critical or high CVEs found
+        if: steps.grype.outputs.critical > 0 || steps.grype.outputs.high > 0
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const imageName = '${{ matrix.image.name }}:${{ matrix.image.tag }}';
+            const critical = parseInt('${{ steps.grype.outputs.critical }}') || 0;
+            const high = parseInt('${{ steps.grype.outputs.high }}') || 0;
+            const medium = parseInt('${{ steps.grype.outputs.medium }}') || 0;
+            const total = parseInt('${{ steps.grype.outputs.total }}') || 0;
+            const today = new Date().toISOString().split('T')[0];
+
+            const title = `[CVE] ${imageName}: ${critical} critical, ${high} high vulnerabilities (${today})`;
+
+            // Check if an open issue already exists for this image
+            const issues = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              labels: 'cve,automated',
+            });
+
+            const existingIssue = issues.data.find(i =>
+              i.title.includes(imageName) && i.title.includes('[CVE]')
+            );
+
+            const body = [
+              `## Scheduled CVE Scan Results`,
+              ``,
+              `**Image:** \`${imageName}\``,
+              `**Scan Date:** ${today}`,
+              `**Scanner:** Grype`,
+              ``,
+              `### Findings`,
+              `| Severity | Count |`,
+              `|----------|-------|`,
+              `| Critical | ${critical} |`,
+              `| High     | ${high} |`,
+              `| Medium   | ${medium} |`,
+              `| **Total**| **${total}** |`,
+              ``,
+              `### SLA Targets`,
+              `- Critical: Patch within **24 hours**`,
+              `- High: Patch within **48 hours**`,
+              ``,
+              `### Next Steps`,
+              `1. Review the full scan results in the workflow artifacts`,
+              `2. Update the base image or apply patches`,
+              `3. Re-run the build pipeline to verify fixes`,
+              ``,
+              `---`,
+              `*This issue was automatically created by the CascadeGuard scheduled scan workflow.*`,
+            ].join('\n');
+
+            if (existingIssue) {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: existingIssue.number,
+                body: `**Updated scan results (${today}):**\n\nCritical: ${critical}, High: ${high}, Medium: ${medium}, Total: ${total}`,
+              });
+              console.log(`Updated existing issue #${existingIssue.number}`);
+            } else {
+              const newIssue = await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title: title,
+                body: body,
+                labels: ['cve', 'automated', 'security'],
+              });
+              console.log(`Created new issue #${newIssue.data.number}`);
+            }
+
+      - name: Upload scan artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: scan-results-${{ matrix.image.name }}
+          path: |
+            grype-results.json
+            trivy-results.json
+          retention-days: 30

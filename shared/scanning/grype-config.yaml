@@ -1,0 +1,51 @@
+# Grype configuration for CascadeGuard image scanning
+# https://github.com/anchore/grype
+
+# Output format for CI integration
+output: "table"
+
+# Fail the scan if vulnerabilities at or above this severity are found
+fail-on-severity: "critical"
+
+# Scope of the scan — all layers (not just the squashed image)
+scope: "all-layers"
+
+# Database configuration
+db:
+  auto-update: true
+  # Maximum acceptable age for the vulnerability database
+  max-allowed-built-age: "120h"
+
+# Match configuration
+match:
+  java:
+    using-cpes: true
+  python:
+    using-cpes: true
+  javascript:
+    using-cpes: true
+  golang:
+    using-cpes: true
+    always-use-cpe-for-stdlib: true
+  stock:
+    using-cpes: true
+
+# Ignore rules — known false positives or accepted risks
+# Each entry must reference a tracking issue for audit trail
+ignore:
+  # Example: kernel headers present in build stage but not in final image
+  # - vulnerability: "CVE-YYYY-XXXXX"
+  #   package:
+  #     name: "linux-libc-dev"
+  #     type: "deb"
+  #   reason: "Build-stage only; not present in final image. Ref: CAS-XXX"
+
+  # Disputed CVEs with no known exploit path in our configuration
+  # Add entries here as they are reviewed and approved by the security team
+
+# External sources for enriched vulnerability data
+external-sources:
+  enable: true
+  maven:
+    search-upstream-by-sha1: true
+    base-url: "https://search.maven.org/solrsearch/select"
