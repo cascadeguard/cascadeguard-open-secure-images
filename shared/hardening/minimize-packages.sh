@@ -54,20 +54,23 @@ if is_debian; then
     gpg-agent
     apt-utils
     e2fsprogs
-    fdisk
-    mount
-    util-linux
   )
 
   echo "  Removing unnecessary Debian packages..."
+  # Collect actually-installed packages first, then remove in a single pass
+  # to avoid cascading auto-remove side-effects that break subsequent scripts.
+  INSTALLED=()
   for pkg in "${PACKAGES_TO_REMOVE[@]}"; do
-    if dpkg -l "$pkg" > /dev/null 2>&1; then
-      apt-get purge -y --auto-remove "$pkg" > /dev/null 2>&1 || true
+    if dpkg -l "$pkg" 2>/dev/null | grep -q '^ii'; then
+      INSTALLED+=("$pkg")
     fi
   done
+  if [ ${#INSTALLED[@]} -gt 0 ]; then
+    apt-get purge -y "${INSTALLED[@]}" > /dev/null 2>&1 || true
+  fi
 
-  # Aggressive autoremove and clean
-  apt-get autoremove -y --purge > /dev/null 2>&1 || true
+  # Light autoremove (no --purge to avoid cascading into essential deps)
+  apt-get autoremove -y > /dev/null 2>&1 || true
   apt-get clean
   rm -rf /var/lib/apt/lists/*
   rm -rf /var/cache/apt/*

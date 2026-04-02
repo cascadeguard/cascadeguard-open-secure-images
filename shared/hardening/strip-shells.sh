@@ -12,7 +12,15 @@ set -euo pipefail
 
 echo "[cascadeguard] Stripping unnecessary shell binaries..."
 
-# Shells to remove — we preserve /bin/sh (required for RUN directives during build)
+# Shells to remove — we preserve /bin/sh (required for RUN directives during build).
+# On Debian, /bin/sh is a symlink to /bin/dash, so we must not remove the shell
+# binary that /bin/sh resolves to — otherwise subsequent Dockerfile RUN instructions
+# would fail with "no such file or directory".
+SH_TARGET=""
+if [ -L /bin/sh ]; then
+  SH_TARGET=$(readlink -f /bin/sh)
+fi
+
 SHELLS_TO_REMOVE=(
   /bin/bash
   /bin/dash
@@ -31,6 +39,12 @@ SHELLS_TO_REMOVE=(
 removed=0
 for shell in "${SHELLS_TO_REMOVE[@]}"; do
   if [ -f "$shell" ] || [ -L "$shell" ]; then
+    # Skip if this is the binary backing /bin/sh
+    real=$(readlink -f "$shell" 2>/dev/null || echo "$shell")
+    if [ "$real" = "$SH_TARGET" ]; then
+      echo "  Kept: $shell (backs /bin/sh)"
+      continue
+    fi
     rm -f "$shell"
     echo "  Removed: $shell"
     removed=$((removed + 1))
