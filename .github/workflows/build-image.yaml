@@ -49,11 +49,8 @@ jobs:
             # Manual trigger for a specific image
             echo 'matrix={"image":["${{ github.event.inputs.image }}"]}' >> "$GITHUB_OUTPUT"
           else
-            # Build all images
-            IMAGES=$(find images -name Dockerfile -exec dirname {} \; \
-              | sed 's|^images/||' \
-              | jq -R -s -c 'split("\n") | map(select(length > 0))')
-            echo "matrix={\"image\":$IMAGES}" >> "$GITHUB_OUTPUT"
+            # Focus on python/3.12 first; enable remaining images once this one is green
+            echo 'matrix={"image":["python/3.12"]}' >> "$GITHUB_OUTPUT"
           fi
 
   # Validate images.yaml with CascadeGuard — dogfooding our own tool.
