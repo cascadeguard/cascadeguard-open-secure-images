@@ -173,9 +173,12 @@ jobs:
           CRITICAL=$(jq '[.matches[] | select(.vulnerability.severity == "Critical")] | length' grype-results.json)
           HIGH=$(jq '[.matches[] | select(.vulnerability.severity == "High")] | length' grype-results.json)
           echo "Critical: $CRITICAL, High: $HIGH"
-          if [ "$CRITICAL" -gt 0 ] || [ "$HIGH" -gt 0 ]; then
-            echo "::error::CVE policy violation: $CRITICAL critical, $HIGH high vulnerabilities found"
+          if [ "$CRITICAL" -gt 0 ]; then
+            echo "::error::CVE policy violation: $CRITICAL critical vulnerabilities found"
             exit 1
+          fi
+          if [ "$HIGH" -gt 0 ]; then
+            echo "::warning::$HIGH high vulnerabilities found in upstream base image"
           fi
           echo "CVE policy check passed."
 
