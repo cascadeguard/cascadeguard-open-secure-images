@@ -58,7 +58,7 @@ jobs:
 
       # ── Grype Scan ──────────────────────────────────────────────
       - name: Install Grype
-        uses: anchore/scan-action/setup@v3
+        run: curl -sSfL https://raw.githubusercontent.com/anchore/grype/main/install.sh | sh -s -- -b /usr/local/bin
 
       - name: Scan with Grype
         id: grype
