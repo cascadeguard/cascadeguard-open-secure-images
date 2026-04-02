@@ -119,7 +119,7 @@ The `release.yaml` workflow builds all images for `linux/amd64` and `linux/arm64
 | Low | 30 days | Allowed |
 | Negligible | 90 days | Allowed |
 
-See `policy/cve-sla.yaml` for full details and exception procedures.
+See [`policy/cve-sla.yaml`](policy/cve-sla.yaml) for SLA targets and [`CVE-STRATEGY.md`](CVE-STRATEGY.md) for the full CVE detection, remediation, and upstream contribution strategy.
 
 ## Contributing
 
