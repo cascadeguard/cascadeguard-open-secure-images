@@ -1,0 +1,109 @@
+# CascadeGuard — CI Workflow
+#
+# Reads images.yaml to dynamically build the matrix of images to process.
+# Adding a new image to images.yaml is the only change needed to enroll it
+# in the full build/scan/sign pipeline.
+
+name: CI
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "images/**"
+      - "shared/**"
+      - "images.yaml"
+      - ".github/workflows/ci.yaml"
+      - ".github/workflows/build-image.yaml"
+  pull_request:
+    branches: [main]
+    paths:
+      - "images/**"
+      - "shared/**"
+      - "images.yaml"
+  workflow_dispatch:
+    inputs:
+      image_filter:
+        description: "Limit to a specific image name (e.g., python). Leave empty for all."
+        required: false
+        default: ""
+
+permissions:
+  contents: read
+  packages: write
+  id-token: write        # Required for cosign keyless signing via OIDC
+  security-events: write # Required for SARIF upload
+
+jobs:
+  # ── Matrix Generation ────────────────────────────────────────────
+  # Parses images.yaml at runtime so the pipeline is always in sync with
+  # the manifest. No hardcoded image lists anywhere in this file.
+  generate-matrix:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.matrix.outputs.matrix }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Generate image matrix from images.yaml
+        id: matrix
+        run: |
+          python3 - <<'PYEOF'
+          import yaml, json, os
+
+          with open('images.yaml') as f:
+              images = yaml.safe_load(f)
+
+          filter_name = os.environ.get('IMAGE_FILTER', '').strip()
+
+          include = []
+          for img in images:
+              # Derive image_path from dockerfile path:
+              # "images/python/3.12/Dockerfile" -> "python/3.12"
+              parts = img['dockerfile'].split('/')
+              image_path = '/'.join(parts[1:-1])
+              if not filter_name or img['image'] == filter_name:
+                  include.append({
+                      'image_path': image_path,
+                      'image_name': img['image'],
+                      'image_tag': img['tag'],
+                  })
+
+          matrix = json.dumps({'include': include})
+          with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
+              f.write(f'matrix={matrix}\n')
+          print(f'Generated matrix with {len(include)} image(s): {[e["image_name"] for e in include]}')
+          PYEOF
+        env:
+          IMAGE_FILTER: ${{ github.event.inputs.image_filter }}
+
+  # ── CascadeGuard Validation ──────────────────────────────────────
+  # Dogfoods the CascadeGuard tool — lints images.yaml and performs a
+  # dry-run state generation to catch misconfigured Dockerfiles early.
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: CascadeGuard validate
+        run: |
+          docker run --rm \
+            -v "${{ github.workspace }}:/workspace" \
+            ghcr.io/cascadeguard/cascadeguard:v0.1.0 \
+            validate \
+          || echo "::warning::CascadeGuard validate exited non-zero — review images.yaml or check CascadeGuard version compatibility"
+
+  # ── Per-Image Build Pipeline ─────────────────────────────────────
+  # Each matrix entry calls the reusable build-image.yaml workflow.
+  # push_and_sign is true only on pushes to main (not PRs).
+  build:
+    needs: [generate-matrix, validate]
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJson(needs.generate-matrix.outputs.matrix) }}
+    uses: ./.github/workflows/build-image.yaml
+    with:
+      image_path: ${{ matrix.image_path }}
+      image_name: ${{ matrix.image_name }}
+      image_tag: ${{ matrix.image_tag }}
+      push_and_sign: ${{ github.event_name != 'pull_request' }}
+    secrets: inherit

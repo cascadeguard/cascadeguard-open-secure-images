@@ -23,27 +23,45 @@ env:
   IMAGE_PREFIX_DOCKERHUB: ${{ github.repository_owner }}
 
 jobs:
+  # ── Matrix Generation ────────────────────────────────────────────
+  generate-matrix:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.matrix.outputs.matrix }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Generate release matrix from images.yaml
+        id: matrix
+        run: |
+          python3 - <<'PYEOF'
+          import yaml, json, os
+
+          with open('images.yaml') as f:
+              images = yaml.safe_load(f)
+
+          include = []
+          for img in images:
+              # Derive context dir from dockerfile: "images/python/3.12/Dockerfile" -> "images/python/3.12"
+              context = '/'.join(img['dockerfile'].split('/')[:-1])
+              include.append({
+                  'context': context,
+                  'name': img['image'],
+                  'tag': img['tag'],
+              })
+
+          matrix = json.dumps({'include': include})
+          with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
+              f.write(f'matrix={matrix}\n')
+          print(f'Release matrix: {[e["name"] for e in include]}')
+          PYEOF
+
   release:
+    needs: generate-matrix
     runs-on: ubuntu-latest
     strategy:
       fail-fast: true
-      matrix:
-        include:
-          - context: images/python/3.12
-            name: python
-            tag: "3.12-slim"
-          - context: images/node/20
-            name: node
-            tag: "20-slim"
-          - context: images/nginx
-            name: nginx
-            tag: stable-alpine-slim
-          - context: images/alpine
-            name: alpine
-            tag: "3.20"
-          - context: images/debian-slim
-            name: debian
-            tag: bookworm-slim
+      matrix: ${{ fromJson(needs.generate-matrix.outputs.matrix) }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -173,32 +191,62 @@ jobs:
           path: sboms/
           merge-multiple: true
 
+      - name: Build release body from images.yaml
+        id: release-body
+        run: |
+          python3 - <<'PYEOF'
+          import yaml, json, os
+
+          with open('images.yaml') as f:
+              images = yaml.safe_load(f)
+
+          owner = os.environ['REPO_OWNER']
+          ref_name = os.environ['REF_NAME']
+          repo = os.environ['REPO']
+
+          rows = []
+          first_image = None
+          for img in images:
+              name = img['image']
+              tag = img['tag']
+              if first_image is None:
+                  first_image = f'{name}:{tag}'
+              rows.append(f'| {name}:{tag} | `ghcr.io/{owner}/{name}:{tag}` | `{owner}/{name}:{tag}` |')
+
+          table = chr(10).join(rows)
+
+          body = f"""## CascadeGuard Secure Base Images {ref_name}
+
+### Images published
+| Image | GHCR | Docker Hub |
+|-------|------|------------|
+{table}
+
+### Security
+- All images scanned with Grype (zero critical/high CVEs at release time)
+- Signed with cosign (keyless / Sigstore)
+- SBOM attestations attached (SPDX JSON)
+
+### Verify
+```bash
+cosign verify \\\\
+  --certificate-identity-regexp "https://github.com/{repo}/.*" \\\\
+  --certificate-oidc-issuer "https://token.actions.githubusercontent.com" \\\\
+  ghcr.io/{owner}/{first_image}
+```"""
+
+          with open('release-body.md', 'w') as f:
+              f.write(body)
+          print('Release body generated.')
+          PYEOF
+        env:
+          REPO_OWNER: ${{ github.repository_owner }}
+          REF_NAME: ${{ github.ref_name }}
+          REPO: ${{ github.repository }}
+
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v1
         with:
           generate_release_notes: true
           files: sboms/*.spdx.json
-          body: |
-            ## CascadeGuard Secure Base Images ${{ github.ref_name }}
-
-            ### Images published
-            | Image | GHCR | Docker Hub |
-            |-------|------|------------|
-            | Python 3.12 | `ghcr.io/${{ github.repository_owner }}/python:3.12-slim` | `${{ github.repository_owner }}/python:3.12-slim` |
-            | Node.js 20 | `ghcr.io/${{ github.repository_owner }}/node:20-slim` | `${{ github.repository_owner }}/node:20-slim` |
-            | Nginx | `ghcr.io/${{ github.repository_owner }}/nginx:stable-alpine-slim` | `${{ github.repository_owner }}/nginx:stable-alpine-slim` |
-            | Alpine 3.20 | `ghcr.io/${{ github.repository_owner }}/alpine:3.20` | `${{ github.repository_owner }}/alpine:3.20` |
-            | Debian Slim | `ghcr.io/${{ github.repository_owner }}/debian:bookworm-slim` | `${{ github.repository_owner }}/debian:bookworm-slim` |
-
-            ### Security
-            - All images scanned with Grype (zero critical/high CVEs at release time)
-            - Signed with cosign (keyless / Sigstore)
-            - SBOM attestations attached (SPDX JSON)
-
-            ### Verify
-            ```bash
-            cosign verify \
-              --certificate-identity-regexp "https://github.com/${{ github.repository }}/.*" \
-              --certificate-oidc-issuer "https://token.actions.githubusercontent.com" \
-              ghcr.io/${{ github.repository_owner }}/python:3.12-slim
-            ```
+          body_path: release-body.md
