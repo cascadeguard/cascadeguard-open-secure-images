@@ -132,8 +132,12 @@ rm -rf /var/log/*.log
 rm -rf /var/log/lastlog
 rm -rf /var/log/faillog
 
-# Remove tmp contents
-rm -rf /tmp/* /var/tmp/*
+# NOTE: /tmp is intentionally NOT cleared here. The Dockerfiles that call
+# this script store other hardening scripts in /tmp and clean them up
+# explicitly after all scripts have run (rm -rf /tmp/*.sh). Clearing /tmp
+# here would delete set-nonroot.sh and strip-shells.sh before they execute,
+# causing a "command not found" (exit 127) error in the RUN chain.
+# /var/tmp is also left alone for the same reason.
 
 # Remove Python byte-compiled files if Python is not the primary runtime
 # (skip this for Python-based images — handled in their Dockerfiles)

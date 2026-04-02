@@ -24,10 +24,10 @@ RUN apt-get update && \
 
 RUN chmod +x /tmp/*.sh && \
     /tmp/minimize-packages.sh && \
+    /tmp/set-nonroot.sh && \
     /tmp/strip-shells.sh && \
     # Purge bash from the apt database so future apt runs can't reinstate it
     apt-get purge -y bash > /dev/null 2>&1 || true && \
-    /tmp/set-nonroot.sh && \
     rm -rf /tmp/*.sh /var/lib/apt/lists/* /var/cache/apt/*
 
 # Debian-specific hardening

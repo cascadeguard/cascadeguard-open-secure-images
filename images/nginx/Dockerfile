@@ -20,8 +20,8 @@ COPY shared/hardening/set-nonroot.sh /tmp/
 RUN apk add --no-cache bash && \
     chmod +x /tmp/*.sh && \
     /tmp/minimize-packages.sh && \
-    /tmp/strip-shells.sh && \
     /tmp/set-nonroot.sh && \
+    /tmp/strip-shells.sh && \
     rm -rf /tmp/*.sh
 
 # Configure nginx to run as non-root

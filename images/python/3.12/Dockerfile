@@ -17,8 +17,8 @@ COPY shared/hardening/set-nonroot.sh /tmp/
 
 RUN chmod +x /tmp/*.sh && \
     /tmp/minimize-packages.sh && \
-    /tmp/strip-shells.sh && \
     /tmp/set-nonroot.sh && \
+    /tmp/strip-shells.sh && \
     rm -rf /tmp/*.sh /var/lib/apt/lists/* /var/cache/apt/*
 
 # Remove pip cache and bytecode to reduce image size
