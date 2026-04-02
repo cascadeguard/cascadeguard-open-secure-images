@@ -105,7 +105,7 @@ jobs:
 
       # ── Scan ────────────────────────────────────────────────────
       - name: Install Grype
-        uses: anchore/scan-action/setup@v3
+        uses: anchore/setup-grype@v1
 
       - name: Scan released image
         run: |
@@ -115,7 +115,7 @@ jobs:
 
       # ── SBOM ────────────────────────────────────────────────────
       - name: Install Syft
-        uses: anchore/sbom-action/setup@v0
+        uses: anchore/setup-syft@v2
 
       - name: Generate SBOM
         run: |

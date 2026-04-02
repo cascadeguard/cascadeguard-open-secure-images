@@ -4,8 +4,11 @@
 # Output format for CI integration
 output: "table"
 
-# Fail the scan if vulnerabilities at or above this severity are found
-fail-on-severity: "critical"
+# NOTE: fail-on-severity is intentionally absent from this shared config.
+# Policy enforcement (whether to fail a build) belongs in the workflow step
+# that uses this config, not here.  The release workflow passes --fail-on critical
+# explicitly; the build workflow evaluates counts after the scan completes so
+# that SBOM generation and structure tests still run even when violations exist.
 
 # Scope of the scan — all layers (not just the squashed image)
 scope: "all-layers"

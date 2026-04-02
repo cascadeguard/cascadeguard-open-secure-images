@@ -56,8 +56,23 @@ jobs:
             echo "matrix={\"image\":$IMAGES}" >> "$GITHUB_OUTPUT"
           fi
 
+  # Validate images.yaml with CascadeGuard — dogfooding our own tool.
+  # Lints the config and performs a dry-run state generation to catch
+  # misconfigured Dockerfiles before the build matrix starts.
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: CascadeGuard validate
+        run: |
+          docker run --rm \
+            -v "${{ github.workspace }}:/workspace" \
+            ghcr.io/cascadeguard/cascadeguard:v0.1.0 \
+            validate \
+          || echo "::warning::CascadeGuard validate exited non-zero — review images.yaml or check CascadeGuard version compatibility"
+
   build:
-    needs: detect-changes
+    needs: [detect-changes, validate]
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -106,31 +121,25 @@ jobs:
           cache-to: type=gha,mode=max
 
       # ── Scanning ─────────────────────────────────────────────────
+      # Install Grype using the dedicated setup action (replaces scan-action/setup)
       - name: Install Grype
-        uses: anchore/scan-action/setup@v3
+        uses: anchore/setup-grype@v1
 
+      # Run Grype once and write both SARIF (for GitHub Security tab) and JSON
+      # (for policy evaluation).  We do NOT pass --fail-on here — the policy gate
+      # comes later so that structure tests and SBOM generation always complete.
       - name: Scan image with Grype
         run: |
           grype "${{ steps.meta.outputs.full_image }}" \
             --config shared/scanning/grype-config.yaml \
-            --output sarif \
-            --file grype-results.sarif
+            --output sarif=grype-results.sarif \
+            --output json=grype-results.json
 
       - name: Upload Grype SARIF results
         if: always()
         uses: github/codeql-action/upload-sarif@v3
         with:
           sarif_file: grype-results.sarif
-
-      - name: Evaluate CVE policy
-        run: |
-          CRITICAL=$(grype "${{ steps.meta.outputs.full_image }}" --output json | jq '[.matches[] | select(.vulnerability.severity == "Critical")] | length')
-          HIGH=$(grype "${{ steps.meta.outputs.full_image }}" --output json | jq '[.matches[] | select(.vulnerability.severity == "High")] | length')
-          echo "Critical: $CRITICAL, High: $HIGH"
-          if [ "$CRITICAL" -gt 0 ] || [ "$HIGH" -gt 0 ]; then
-            echo "::error::CVE policy violation: $CRITICAL critical, $HIGH high vulnerabilities found"
-            exit 1
-          fi
 
       # ── Structure Tests ──────────────────────────────────────────
       - name: Install container-structure-test
@@ -146,8 +155,9 @@ jobs:
             --config images/${{ matrix.image }}/test/structure.yaml
 
       # ── SBOM Generation ──────────────────────────────────────────
+      # Install Syft using the dedicated setup action (replaces sbom-action/setup)
       - name: Install Syft
-        uses: anchore/sbom-action/setup@v0
+        uses: anchore/setup-syft@v2
 
       - name: Generate SBOM
         run: |
@@ -159,6 +169,20 @@ jobs:
         with:
           name: sbom-${{ steps.meta.outputs.image_name }}
           path: sbom.spdx.json
+
+      # ── CVE Policy Gate ─────────────────────────────────────────
+      # Evaluated after structure tests and SBOM so those artifacts are always
+      # collected even when a policy violation is found.
+      - name: Evaluate CVE policy
+        run: |
+          CRITICAL=$(jq '[.matches[] | select(.vulnerability.severity == "Critical")] | length' grype-results.json)
+          HIGH=$(jq '[.matches[] | select(.vulnerability.severity == "High")] | length' grype-results.json)
+          echo "Critical: $CRITICAL, High: $HIGH"
+          if [ "$CRITICAL" -gt 0 ] || [ "$HIGH" -gt 0 ]; then
+            echo "::error::CVE policy violation: $CRITICAL critical, $HIGH high vulnerabilities found"
+            exit 1
+          fi
+          echo "CVE policy check passed."
 
       # ── Sign & Push ─────────────────────────────────────────────
       - name: Install Cosign

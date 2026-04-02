@@ -1,0 +1,38 @@
+# CascadeGuard enrolment file for cascadeguard-open-secure-images
+#
+# This file registers the hardened base images with CascadeGuard so it can:
+# - Discover base image dependencies from each Dockerfile
+# - Track upstream changes and trigger automated rebuilds
+# - Generate state files for the dependency graph
+#
+# https://github.com/cascadeguard/cascadeguard
+
+- name: python-3.12-slim
+  dockerfile: images/python/3.12/Dockerfile
+  registry: ghcr.io/cascadeguard
+  image: python
+  tag: 3.12-slim
+
+- name: node-20-slim
+  dockerfile: images/node/20/Dockerfile
+  registry: ghcr.io/cascadeguard
+  image: node
+  tag: 20-slim
+
+- name: nginx-stable-alpine-slim
+  dockerfile: images/nginx/Dockerfile
+  registry: ghcr.io/cascadeguard
+  image: nginx
+  tag: stable-alpine-slim
+
+- name: alpine-3.20
+  dockerfile: images/alpine/Dockerfile
+  registry: ghcr.io/cascadeguard
+  image: alpine
+  tag: "3.20"
+
+- name: debian-bookworm-slim
+  dockerfile: images/debian-slim/Dockerfile
+  registry: ghcr.io/cascadeguard
+  image: debian
+  tag: bookworm-slim

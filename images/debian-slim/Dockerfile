@@ -15,15 +15,23 @@ COPY shared/hardening/minimize-packages.sh /tmp/
 COPY shared/hardening/strip-shells.sh /tmp/
 COPY shared/hardening/set-nonroot.sh /tmp/
 
+# Upgrade packages first so apt-get upgrade cannot later reinstall a shell
+# that strip-shells.sh removes.
+RUN apt-get update && \
+    apt-get upgrade -y && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/* /var/cache/apt/*
+
 RUN chmod +x /tmp/*.sh && \
     /tmp/minimize-packages.sh && \
     /tmp/strip-shells.sh && \
+    # Purge bash from the apt database so future apt runs can't reinstate it
+    apt-get purge -y bash > /dev/null 2>&1 || true && \
     /tmp/set-nonroot.sh && \
     rm -rf /tmp/*.sh /var/lib/apt/lists/* /var/cache/apt/*
 
 # Debian-specific hardening
-RUN apt-get update && apt-get upgrade -y && \
-    apt-get autoremove -y --purge && \
+RUN apt-get autoremove -y --purge && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/* /var/cache/apt/* && \
     # Remove suid/sgid bits from non-essential binaries

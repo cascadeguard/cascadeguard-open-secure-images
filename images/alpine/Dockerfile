@@ -15,7 +15,10 @@ COPY shared/hardening/minimize-packages.sh /tmp/
 COPY shared/hardening/strip-shells.sh /tmp/
 COPY shared/hardening/set-nonroot.sh /tmp/
 
-RUN chmod +x /tmp/*.sh && \
+# Install bash temporarily so hardening scripts (#!/usr/bin/env bash) can run;
+# strip-shells.sh removes /bin/bash before the image is finalised.
+RUN apk add --no-cache bash && \
+    chmod +x /tmp/*.sh && \
     /tmp/minimize-packages.sh && \
     /tmp/strip-shells.sh && \
     /tmp/set-nonroot.sh && \
