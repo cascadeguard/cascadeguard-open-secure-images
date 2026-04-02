@@ -4,8 +4,8 @@
 FROM debian:bookworm-slim AS build
 
 LABEL maintainer="CascadeGuard <security@cascadeguard.dev>"
-LABEL org.opencontainers.image.title="cascadeguard/debian-slim"
-LABEL org.opencontainers.image.version="bookworm"
+LABEL org.opencontainers.image.title="cascadeguard/debian"
+LABEL org.opencontainers.image.version="bookworm-slim"
 LABEL org.opencontainers.image.description="CascadeGuard hardened Debian Bookworm Slim base image"
 LABEL org.opencontainers.image.source="https://github.com/cascadeguard/open-secure-images"
 LABEL org.opencontainers.image.licenses="Apache-2.0"

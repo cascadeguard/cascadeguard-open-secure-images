@@ -5,7 +5,7 @@ FROM python:3.12-slim AS build
 
 LABEL maintainer="CascadeGuard <security@cascadeguard.dev>"
 LABEL org.opencontainers.image.title="cascadeguard/python"
-LABEL org.opencontainers.image.version="3.12"
+LABEL org.opencontainers.image.version="3.12-slim"
 LABEL org.opencontainers.image.description="CascadeGuard hardened Python 3.12 base image"
 LABEL org.opencontainers.image.source="https://github.com/cascadeguard/open-secure-images"
 LABEL org.opencontainers.image.licenses="Apache-2.0"

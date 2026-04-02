@@ -80,8 +80,8 @@ jobs:
       - name: Extract image metadata
         id: meta
         run: |
-          IMAGE_NAME=$(echo "${{ matrix.image }}" | tr '/' '-')
-          IMAGE_TAG=$(echo "${{ matrix.image }}" | awk -F'/' '{print $NF}')
+          IMAGE_NAME=$(jq -r --arg key "${{ matrix.image }}" '.[$key].name' .image-meta.json)
+          IMAGE_TAG=$(jq -r --arg key "${{ matrix.image }}" '.[$key].tag' .image-meta.json)
           FULL_IMAGE="${{ env.IMAGE_PREFIX }}/${IMAGE_NAME}:${IMAGE_TAG}"
           echo "image_name=${IMAGE_NAME}" >> "$GITHUB_OUTPUT"
           echo "image_tag=${IMAGE_TAG}" >> "$GITHUB_OUTPUT"

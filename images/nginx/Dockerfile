@@ -5,7 +5,7 @@ FROM nginx:stable-alpine-slim AS build
 
 LABEL maintainer="CascadeGuard <security@cascadeguard.dev>"
 LABEL org.opencontainers.image.title="cascadeguard/nginx"
-LABEL org.opencontainers.image.version="stable"
+LABEL org.opencontainers.image.version="stable-alpine-slim"
 LABEL org.opencontainers.image.description="CascadeGuard hardened Nginx base image"
 LABEL org.opencontainers.image.source="https://github.com/cascadeguard/open-secure-images"
 LABEL org.opencontainers.image.licenses="Apache-2.0"

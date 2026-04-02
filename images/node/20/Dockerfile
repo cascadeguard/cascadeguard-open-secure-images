@@ -5,7 +5,7 @@ FROM node:20-slim AS build
 
 LABEL maintainer="CascadeGuard <security@cascadeguard.dev>"
 LABEL org.opencontainers.image.title="cascadeguard/node"
-LABEL org.opencontainers.image.version="20"
+LABEL org.opencontainers.image.version="20-slim"
 LABEL org.opencontainers.image.description="CascadeGuard hardened Node.js 20 base image"
 LABEL org.opencontainers.image.source="https://github.com/cascadeguard/open-secure-images"
 LABEL org.opencontainers.image.licenses="Apache-2.0"

@@ -21,18 +21,18 @@ Most container security issues originate in the base image. Upstream images ship
 
 | Image | Base | Tag | Pull |
 |-------|------|-----|------|
-| Python 3.12 | `python:3.12-slim` | `3.12` | `docker pull ghcr.io/cascadeguard/python-3.12:3.12` |
-| Node.js 20 | `node:20-slim` | `20` | `docker pull ghcr.io/cascadeguard/node-20:20` |
-| Nginx | `nginx:stable-alpine-slim` | `stable` | `docker pull ghcr.io/cascadeguard/nginx:stable` |
+| Python 3.12 | `python:3.12-slim` | `3.12-slim` | `docker pull ghcr.io/cascadeguard/python:3.12-slim` |
+| Node.js 20 | `node:20-slim` | `20-slim` | `docker pull ghcr.io/cascadeguard/node:20-slim` |
+| Nginx | `nginx:stable-alpine-slim` | `stable-alpine-slim` | `docker pull ghcr.io/cascadeguard/nginx:stable-alpine-slim` |
 | Alpine 3.20 | `alpine:3.20` | `3.20` | `docker pull ghcr.io/cascadeguard/alpine:3.20` |
-| Debian Slim | `debian:bookworm-slim` | `bookworm` | `docker pull ghcr.io/cascadeguard/debian-slim:bookworm` |
+| Debian Slim | `debian:bookworm-slim` | `bookworm-slim` | `docker pull ghcr.io/cascadeguard/debian:bookworm-slim` |
 
 ## Quick Start
 
 ### Pull an image
 
 ```bash
-docker pull ghcr.io/cascadeguard/python-3.12:3.12
+docker pull ghcr.io/cascadeguard/python:3.12-slim
 ```
 
 ### Verify the signature
@@ -41,13 +41,13 @@ docker pull ghcr.io/cascadeguard/python-3.12:3.12
 cosign verify \
   --certificate-identity-regexp "https://github.com/cascadeguard/open-secure-images/.*" \
   --certificate-oidc-issuer "https://token.actions.githubusercontent.com" \
-  ghcr.io/cascadeguard/python-3.12:3.12
+  ghcr.io/cascadeguard/python:3.12-slim
 ```
 
 ### Use in a Dockerfile
 
 ```dockerfile
-FROM ghcr.io/cascadeguard/python-3.12:3.12
+FROM ghcr.io/cascadeguard/python:3.12-slim
 
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
@@ -63,7 +63,7 @@ cosign verify-attestation \
   --type spdxjson \
   --certificate-identity-regexp "https://github.com/cascadeguard/open-secure-images/.*" \
   --certificate-oidc-issuer "https://token.actions.githubusercontent.com" \
-  ghcr.io/cascadeguard/python-3.12:3.12
+  ghcr.io/cascadeguard/python:3.12-slim
 ```
 
 ## Repository Structure

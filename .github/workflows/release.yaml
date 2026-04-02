@@ -30,20 +30,20 @@ jobs:
       matrix:
         include:
           - context: images/python/3.12
-            name: python-3.12
-            tag: "3.12"
+            name: python
+            tag: "3.12-slim"
           - context: images/node/20
-            name: node-20
-            tag: "20"
+            name: node
+            tag: "20-slim"
           - context: images/nginx
             name: nginx
-            tag: stable
+            tag: stable-alpine-slim
           - context: images/alpine
             name: alpine
             tag: "3.20"
           - context: images/debian-slim
-            name: debian-slim
-            tag: bookworm
+            name: debian
+            tag: bookworm-slim
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -184,11 +184,11 @@ jobs:
             ### Images published
             | Image | GHCR | Docker Hub |
             |-------|------|------------|
-            | Python 3.12 | `ghcr.io/${{ github.repository_owner }}/python-3.12:3.12` | `${{ github.repository_owner }}/python-3.12:3.12` |
-            | Node.js 20 | `ghcr.io/${{ github.repository_owner }}/node-20:20` | `${{ github.repository_owner }}/node-20:20` |
-            | Nginx | `ghcr.io/${{ github.repository_owner }}/nginx:stable` | `${{ github.repository_owner }}/nginx:stable` |
+            | Python 3.12 | `ghcr.io/${{ github.repository_owner }}/python:3.12-slim` | `${{ github.repository_owner }}/python:3.12-slim` |
+            | Node.js 20 | `ghcr.io/${{ github.repository_owner }}/node:20-slim` | `${{ github.repository_owner }}/node:20-slim` |
+            | Nginx | `ghcr.io/${{ github.repository_owner }}/nginx:stable-alpine-slim` | `${{ github.repository_owner }}/nginx:stable-alpine-slim` |
             | Alpine 3.20 | `ghcr.io/${{ github.repository_owner }}/alpine:3.20` | `${{ github.repository_owner }}/alpine:3.20` |
-            | Debian Slim | `ghcr.io/${{ github.repository_owner }}/debian-slim:bookworm` | `${{ github.repository_owner }}/debian-slim:bookworm` |
+            | Debian Slim | `ghcr.io/${{ github.repository_owner }}/debian:bookworm-slim` | `${{ github.repository_owner }}/debian:bookworm-slim` |
 
             ### Security
             - All images scanned with Grype (zero critical/high CVEs at release time)
@@ -200,5 +200,5 @@ jobs:
             cosign verify \
               --certificate-identity-regexp "https://github.com/${{ github.repository }}/.*" \
               --certificate-oidc-issuer "https://token.actions.githubusercontent.com" \
-              ghcr.io/${{ github.repository_owner }}/python-3.12:3.12
+              ghcr.io/${{ github.repository_owner }}/python:3.12-slim
             ```

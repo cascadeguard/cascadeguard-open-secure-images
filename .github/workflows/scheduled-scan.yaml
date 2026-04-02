@@ -28,16 +28,16 @@ jobs:
       fail-fast: false
       matrix:
         image:
-          - name: python-3.12
-            tag: "3.12"
-          - name: node-20
-            tag: "20"
+          - name: python
+            tag: "3.12-slim"
+          - name: node
+            tag: "20-slim"
           - name: nginx
-            tag: stable
+            tag: stable-alpine-slim
           - name: alpine
             tag: "3.20"
-          - name: debian-slim
-            tag: bookworm
+          - name: debian
+            tag: bookworm-slim
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
