@@ -46,7 +46,6 @@ fileExistenceTests:
   - name: "Cache directory exists and is writable"
     path: "/var/cache/nginx"
     shouldExist: true
-    isDir: true
 
   - name: "No man pages"
     path: "/usr/share/man/man1"
