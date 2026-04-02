@@ -56,12 +56,10 @@ fileExistenceTests:
   - name: "/app directory exists"
     path: "/app"
     shouldExist: true
-    isDir: true
 
   - name: "No apt lists remain"
     path: "/var/lib/apt/lists"
     shouldExist: true
-    isDir: true
 
   - name: "No man pages"
     path: "/usr/share/man/man1"

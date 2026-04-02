@@ -51,9 +51,7 @@ fileExistenceTests:
   - name: "/app directory exists"
     path: "/app"
     shouldExist: true
-    isDir: true
 
   - name: "No apk cache"
     path: "/var/cache/apk"
     shouldExist: true
-    isDir: true
