@@ -26,6 +26,9 @@ RUN apk add --no-cache bash && \
 
 # Alpine-specific hardening
 RUN apk --no-cache upgrade && \
+    # wget in Alpine 3.20 is a busybox applet — apk del silently no-ops.
+    # Remove the binary directly to satisfy the no-wget security policy.
+    rm -f /usr/bin/wget && \
     # Remove apk cache entirely
     rm -rf /var/cache/apk/* && \
     # Remove suid bits from all binaries
