@@ -211,32 +211,34 @@ jobs:
               tag = img['tag']
               if first_image is None:
                   first_image = f'{name}:{tag}'
-              rows.append(f'| {name}:{tag} | `ghcr.io/{owner}/{name}:{tag}` | `{owner}/{name}:{tag}` |')
+              rows.append(
+                  f'| {name}:{tag} | `ghcr.io/{owner}/{name}:{tag}` | `{owner}/{name}:{tag}` |'
+              )
 
-          table = chr(10).join(rows)
-
-          body = f"""## CascadeGuard Secure Base Images {ref_name}
-
-### Images published
-| Image | GHCR | Docker Hub |
-|-------|------|------------|
-{table}
-
-### Security
-- All images scanned with Grype (zero critical/high CVEs at release time)
-- Signed with cosign (keyless / Sigstore)
-- SBOM attestations attached (SPDX JSON)
-
-### Verify
-```bash
-cosign verify \\\\
-  --certificate-identity-regexp "https://github.com/{repo}/.*" \\\\
-  --certificate-oidc-issuer "https://token.actions.githubusercontent.com" \\\\
-  ghcr.io/{owner}/{first_image}
-```"""
+          lines = [
+              f'## CascadeGuard Secure Base Images {ref_name}',
+              '',
+              '### Images published',
+              '| Image | GHCR | Docker Hub |',
+              '|-------|------|------------|',
+              '\n'.join(rows),
+              '',
+              '### Security',
+              '- All images scanned with Grype (zero critical/high CVEs at release time)',
+              '- Signed with cosign (keyless / Sigstore)',
+              '- SBOM attestations attached (SPDX JSON)',
+              '',
+              '### Verify',
+              '```bash',
+              f'cosign verify \\',
+              f'  --certificate-identity-regexp "https://github.com/{repo}/.*" \\',
+              f'  --certificate-oidc-issuer "https://token.actions.githubusercontent.com" \\',
+              f'  ghcr.io/{owner}/{first_image}',
+              '```',
+          ]
 
           with open('release-body.md', 'w') as f:
-              f.write(body)
+              f.write('\n'.join(lines) + '\n')
           print('Release body generated.')
           PYEOF
         env:
