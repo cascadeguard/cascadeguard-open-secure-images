@@ -5,7 +5,7 @@
 # image list. Adding an image to images.yaml automatically enrolls it here.
 #
 # Issues are created per CVE+package (not per image). Affected images are
-# tracked via labels. Reports are committed to reports/<image>/ in git.
+# tracked via labels. Reports are committed alongside each image's Dockerfile.
 
 name: Scheduled Vulnerability Scan
 
@@ -43,7 +43,11 @@ jobs:
           with open('images.yaml') as f:
               images = yaml.safe_load(f)
 
-          include = [{'name': img['image'], 'tag': img['tag']} for img in images]
+          include = [{
+              'name': img['image'],
+              'tag': img['tag'],
+              'dir': '/'.join(img['dockerfile'].split('/')[:-1]),
+          } for img in images]
 
           matrix = json.dumps({'include': include})
           with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
@@ -127,7 +131,7 @@ jobs:
       # ── Commit reports to git ───────────────────────────────────
       - name: Commit vulnerability reports
         run: |
-          REPORT_DIR="reports/${{ matrix.name }}"
+          REPORT_DIR="${{ matrix.dir }}/reports"
           mkdir -p "$REPORT_DIR"
 
           # Build a stable, diffable summary from Grype JSON
