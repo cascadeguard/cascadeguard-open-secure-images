@@ -91,11 +91,38 @@ jobs:
             --output sarif=grype-results.sarif \
             --output json=grype-results.json
 
+      # category is required when uploading from a matrix workflow — without it
+      # every job uploads to the same default category and GitHub Code Scanning
+      # reports "N configurations not found" because it can't distinguish them.
       - name: Upload Grype SARIF results
         if: always()
         uses: github/codeql-action/upload-sarif@v4
         with:
           sarif_file: grype-results.sarif
+          category: grype-${{ inputs.image_name }}
+        continue-on-error: true
+
+      # ── Trivy (secondary scanner) ────────────────────────────────
+      # Grype is the primary scanner and drives the CVE policy gate below.
+      # Trivy provides a cross-check using a different database; its results
+      # are uploaded as an artifact for comparison but do not gate the build.
+      - name: Run Trivy vulnerability scan
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: ${{ steps.meta.outputs.full_image }}
+          format: json
+          output: trivy-results.json
+          severity: CRITICAL,HIGH,MEDIUM
+          exit-code: "0"
+        continue-on-error: true
+
+      - name: Upload Trivy results artifact
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: trivy-${{ inputs.image_name }}-${{ inputs.image_tag }}
+          path: trivy-results.json
+          retention-days: 30
 
       # ── Structure Tests ──────────────────────────────────────────
       - name: Install container-structure-test
