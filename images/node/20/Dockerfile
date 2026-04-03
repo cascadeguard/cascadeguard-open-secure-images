@@ -1,7 +1,9 @@
 # CascadeGuard Hardened Node.js 20 Base Image
 # https://github.com/cascadeguard/open-secure-images
 
-FROM node:20-slim AS build
+# Pinned to digest for reproducibility (node:20-slim, last pushed 2026-03-25).
+# Update this digest when upstream releases a new node:20-slim with security fixes.
+FROM node:20-slim@sha256:1e85773c98c31d4fe5b545e4cb17379e617b348832fb3738b22a08f68dec30f3 AS build
 
 LABEL maintainer="CascadeGuard <security@cascadeguard.dev>"
 LABEL org.opencontainers.image.title="cascadeguard/node"
@@ -20,6 +22,13 @@ RUN chmod +x /tmp/*.sh && \
     /tmp/set-nonroot.sh && \
     /tmp/strip-shells.sh && \
     rm -rf /tmp/*.sh /var/lib/apt/lists/* /var/cache/apt/*
+
+# Upgrade npm to latest to patch HIGH-severity tar CVEs bundled in npm:
+# GHSA-83g3-92jg-28cx, CVE-2026-26960, GHSA-qffp-2rhf-9h96, GHSA-9ppj-qmqm-q256,
+# CVE-2026-29786, CVE-2026-31802, CVE-2026-23745, CVE-2026-23950.
+# The node:20-slim base ships npm with a vulnerable tar; upgrading npm replaces
+# the bundled tar at /usr/local/lib/node_modules/npm/node_modules/tar.
+RUN npm install -g npm@latest
 
 # Remove npm cache and unnecessary node tooling
 RUN npm cache clean --force 2>/dev/null || true && \
