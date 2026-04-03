@@ -4,9 +4,8 @@
 # The image matrix is generated at runtime from images.yaml — no hardcoded
 # image list. Adding an image to images.yaml automatically enrolls it here.
 #
-# Architecture: scan jobs are read-only; a single collect-reports job
-# commits all vulnerability reports in one push to avoid race conditions
-# when matrix jobs run in parallel.
+# Scan processing (reports + per-CVE issues) is handled by the CascadeGuard
+# CLI — see `cascadeguard scan-report` and `cascadeguard scan-issues`.
 
 name: Scheduled Vulnerability Scan
 
@@ -17,7 +16,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
   packages: read
   issues: write
   security-events: write
@@ -25,6 +24,7 @@ permissions:
 env:
   REGISTRY: ghcr.io
   IMAGE_PREFIX: ghcr.io/${{ github.repository_owner }}
+  CASCADEGUARD_VERSION: "v0.1.0"
 
 jobs:
   # ── Matrix Generation ────────────────────────────────────────────
@@ -102,17 +102,6 @@ jobs:
             --output sarif \
             --file grype-results.sarif || true
 
-          # Extract counts
-          CRITICAL=$(jq '[.matches[] | select(.vulnerability.severity == "Critical")] | length' grype-results.json 2>/dev/null || echo 0)
-          HIGH=$(jq '[.matches[] | select(.vulnerability.severity == "High")] | length' grype-results.json 2>/dev/null || echo 0)
-          MEDIUM=$(jq '[.matches[] | select(.vulnerability.severity == "Medium")] | length' grype-results.json 2>/dev/null || echo 0)
-          TOTAL=$(jq '.matches | length' grype-results.json 2>/dev/null || echo 0)
-
-          echo "critical=$CRITICAL" >> "$GITHUB_OUTPUT"
-          echo "high=$HIGH" >> "$GITHUB_OUTPUT"
-          echo "medium=$MEDIUM" >> "$GITHUB_OUTPUT"
-          echo "total=$TOTAL" >> "$GITHUB_OUTPUT"
-
       - name: Upload Grype SARIF
         if: always()
         uses: github/codeql-action/upload-sarif@c10b8064de6f491fea524254123dbe5e09572f13 # v4
@@ -130,40 +119,46 @@ jobs:
           severity: "CRITICAL,HIGH"
         continue-on-error: true
 
-      # ── Stage reports as artifacts (no git push here) ───────────
-      - name: Prepare report files
+      # ── Install CascadeGuard CLI ────────────────────────────────
+      - name: Install CascadeGuard CLI
         run: |
-          REPORT_DIR="${{ matrix.dir }}/reports"
-          mkdir -p "$REPORT_DIR"
+          pip install --quiet git+https://github.com/cascadeguard/cascadeguard.git@${{ env.CASCADEGUARD_VERSION }}#subdirectory=app
 
-          # Build a stable, diffable summary from Grype JSON
-          if [ -f grype-results.json ]; then
-            jq -S '{
-              image: "${{ matrix.name }}:${{ matrix.tag }}",
-              scan_date: (now | strftime("%Y-%m-%d")),
-              scanner: "grype",
-              summary: {
-                critical: [.matches[] | select(.vulnerability.severity == "Critical")] | length,
-                high: [.matches[] | select(.vulnerability.severity == "High")] | length,
-                medium: [.matches[] | select(.vulnerability.severity == "Medium")] | length,
-                total: .matches | length
-              },
-              vulnerabilities: [.matches[] | select(.vulnerability.severity == "Critical" or .vulnerability.severity == "High") | {
-                id: .vulnerability.id,
-                severity: .vulnerability.severity,
-                package: .artifact.name,
-                installed: .artifact.version,
-                fixed: (.vulnerability.fix.versions // [] | join(", ")),
-                description: .vulnerability.description
-              }] | sort_by(.severity, .id)
-            }' grype-results.json > "$REPORT_DIR/grype-report.json" 2>/dev/null || true
+      # ── Generate diffable report ────────────────────────────────
+      - name: Generate vulnerability report
+        run: |
+          cascadeguard scan-report \
+            --grype grype-results.json \
+            --trivy trivy-results.json \
+            --image "${{ matrix.name }}" \
+            --dir "images/${{ matrix.name }}/reports"
+
+      # ── Commit report to repo ───────────────────────────────────
+      - name: Commit vulnerability report
+        run: |
+          git config user.name "cascadeguard-bot"
+          git config user.email "bot@cascadeguard.dev"
+          git add "images/${{ matrix.name }}/reports/"
+          if git diff --cached --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "chore: update vulnerability report for ${{ matrix.name }}"
+            git push
           fi
 
-          if [ -f trivy-results.json ]; then
-            cp trivy-results.json "$REPORT_DIR/trivy-report.json" 2>/dev/null || true
-          fi
+      # ── Create/update per-CVE GitHub issues ─────────────────────
+      - name: Create or update CVE issues
+        run: |
+          cascadeguard scan-issues \
+            --grype grype-results.json \
+            --trivy trivy-results.json \
+            --image "${{ matrix.name }}" \
+            --tag "${{ matrix.tag }}" \
+            --repo "${{ github.repository }}"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Upload report artifacts
+      - name: Upload scan artifacts
         if: always()
         uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7
         with:
@@ -173,175 +168,6 @@ jobs:
             grype-results.json
             trivy-results.json
           retention-days: 30
-
-      # ── Per-CVE GitHub Issues ───────────────────────────────────
-      - name: Create or update per-CVE issues
-        if: steps.grype.outputs.critical > 0 || steps.grype.outputs.high > 0
-        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8
-        with:
-          script: |
-            const fs = require('fs');
-            const imageName = '${{ matrix.name }}';
-            const imageTag = '${{ matrix.tag }}';
-            const imageLabel = `image:${imageName}`;
-            const runUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
-            const today = new Date().toISOString().split('T')[0];
-
-            // Parse Grype results
-            let grypeMatches = [];
-            try {
-              const raw = fs.readFileSync('grype-results.json', 'utf8');
-              const grype = JSON.parse(raw);
-              grypeMatches = grype.matches || [];
-            } catch (e) {
-              console.log('Could not parse grype-results.json:', e.message);
-            }
-
-            // Filter to critical + high only
-            const cves = grypeMatches
-              .filter(m => m.vulnerability.severity === 'Critical' || m.vulnerability.severity === 'High')
-              .map(m => ({
-                id: m.vulnerability.id,
-                severity: m.vulnerability.severity,
-                pkg: m.artifact.name,
-                installed: m.artifact.version,
-                fixed: (m.vulnerability.fix?.versions || []).join(', ') || 'none',
-              }));
-
-            // De-dup by CVE+package
-            const seen = new Set();
-            const unique = cves.filter(c => {
-              const key = `${c.id}:${c.pkg}`;
-              if (seen.has(key)) return false;
-              seen.add(key);
-              return true;
-            });
-
-            if (unique.length === 0) {
-              console.log('No critical/high CVEs to report.');
-              return;
-            }
-
-            // Ensure labels exist
-            const ensureLabel = async (name, color, description) => {
-              try {
-                await github.rest.issues.getLabel({ owner: context.repo.owner, repo: context.repo.repo, name });
-              } catch {
-                await github.rest.issues.createLabel({ owner: context.repo.owner, repo: context.repo.repo, name, color, description });
-              }
-            };
-
-            await ensureLabel('cve', 'd73a4a', 'CVE vulnerability finding');
-            await ensureLabel('security', 'e11d48', 'Security-related');
-            await ensureLabel('severity:critical', 'b60205', 'Critical severity');
-            await ensureLabel('severity:high', 'ff9f1c', 'High severity');
-            await ensureLabel(imageLabel, '0075ca', `Affects ${imageName} image`);
-
-            // Fetch all open CVE issues once
-            const openIssues = await github.paginate(github.rest.issues.listForRepo, {
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              state: 'all',
-              labels: 'cve',
-              per_page: 100,
-            });
-
-            // Step summary table
-            let summary = `## Scan Results: ${imageName}:${imageTag} (${today})\n\n`;
-            summary += '| CVE | Severity | Package | Installed | Fix | Issue |\n';
-            summary += '|-----|----------|---------|-----------|-----|-------|\n';
-
-            for (const cve of unique) {
-              const titlePrefix = `${cve.id}: ${cve.pkg}`;
-              const sevLower = cve.severity.toLowerCase();
-              const sevLabel = `severity:${sevLower}`;
-
-              // Match existing issue by CVE+package prefix in title
-              const existing = openIssues.find(i =>
-                i.title.startsWith(titlePrefix) && i.labels.some(l => l.name === 'cve')
-              );
-
-              if (existing) {
-                // Add image label if not already present
-                const hasImageLabel = existing.labels.some(l => l.name === imageLabel);
-                if (!hasImageLabel) {
-                  const currentLabels = existing.labels.map(l => l.name);
-                  await github.rest.issues.update({
-                    owner: context.repo.owner,
-                    repo: context.repo.repo,
-                    issue_number: existing.number,
-                    labels: [...currentLabels, imageLabel],
-                  });
-                }
-
-                // Reopen if previously closed
-                if (existing.state === 'closed') {
-                  await github.rest.issues.update({
-                    owner: context.repo.owner,
-                    repo: context.repo.repo,
-                    issue_number: existing.number,
-                    state: 'open',
-                  });
-                }
-
-                // Add scan-update comment
-                await github.rest.issues.createComment({
-                  owner: context.repo.owner,
-                  repo: context.repo.repo,
-                  issue_number: existing.number,
-                  body: [
-                    `### Re-scan: ${imageName}:${imageTag} — ${today}`,
-                    '',
-                    `| Field | Value |`,
-                    `|-------|-------|`,
-                    `| Image | \`${imageName}:${imageTag}\` |`,
-                    `| Installed | \`${cve.installed}\` |`,
-                    `| Fix available | ${cve.fixed} |`,
-                    `| Scan run | [${context.runId}](${runUrl}) |`,
-                  ].join('\n'),
-                });
-
-                summary += `| ${cve.id} | ${cve.severity} | ${cve.pkg} | ${cve.installed} | ${cve.fixed} | #${existing.number} (updated) |\n`;
-                console.log(`Updated existing issue #${existing.number} for ${cve.id}:${cve.pkg}`);
-              } else {
-                // Create new issue
-                const sla = cve.severity === 'Critical' ? '24 hours' : '48 hours';
-                const body = [
-                  `## ${cve.id}: ${cve.pkg} (${sevLower})`,
-                  '',
-                  `| Field | Value |`,
-                  `|-------|-------|`,
-                  `| CVE | ${cve.id} |`,
-                  `| Severity | ${cve.severity} |`,
-                  `| Package | \`${cve.pkg}\` |`,
-                  `| Installed version | \`${cve.installed}\` |`,
-                  `| Fix available | ${cve.fixed} |`,
-                  `| First detected | ${today} |`,
-                  `| SLA | Patch within **${sla}** |`,
-                  `| Scan run | [${context.runId}](${runUrl}) |`,
-                  '',
-                  `### Affected images`,
-                  `- \`${imageName}:${imageTag}\``,
-                  '',
-                  '---',
-                  '*Automatically created by CascadeGuard scheduled scan.*',
-                ].join('\n');
-
-                const newIssue = await github.rest.issues.create({
-                  owner: context.repo.owner,
-                  repo: context.repo.repo,
-                  title: `${titlePrefix} (${sevLower})`,
-                  body,
-                  labels: ['cve', 'security', sevLabel, imageLabel],
-                });
-
-                summary += `| ${cve.id} | ${cve.severity} | ${cve.pkg} | ${cve.installed} | ${cve.fixed} | #${newIssue.data.number} (new) |\n`;
-                console.log(`Created issue #${newIssue.data.number} for ${cve.id}:${cve.pkg}`);
-              }
-            }
-
-            // Post step summary
-            await core.summary.addRaw(summary).write();
 
   # ── Collect & Commit All Reports (single write) ──────────────────
   collect-reports:
