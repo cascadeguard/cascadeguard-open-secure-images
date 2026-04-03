@@ -167,7 +167,7 @@ jobs:
             "${{ env.IMAGE_PREFIX_DOCKERHUB }}/${{ matrix.name }}:${{ matrix.tag }}"
 
       - name: Upload SBOM artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: sbom-release-${{ matrix.name }}
           path: sbom-${{ matrix.name }}.spdx.json
