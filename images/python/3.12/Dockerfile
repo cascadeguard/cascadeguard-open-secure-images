@@ -26,10 +26,12 @@ RUN chmod +x /tmp/*.sh && \
 #   The CLI tools (infocmp, tput, captoinfo) are not required in a Python runtime.
 # CVE-2026-4046: iconv() can crash when converting IBM1390/IBM1399 character sets.
 #   These mainframe encoding gconv modules are never needed in a Python container.
-RUN apt-get update && \
-    apt-get purge -y --auto-remove ncurses-bin && \
-    rm -rf /var/lib/apt/lists/* /var/cache/apt/* && \
-    find /usr/lib -name 'IBM1390.so' -o -name 'IBM1399.so' | xargs rm -f
+RUN if dpkg -l ncurses-bin 2>/dev/null | grep -q '^ii'; then \
+      apt-get update && \
+      apt-get purge -y ncurses-bin && \
+      rm -rf /var/lib/apt/lists/* /var/cache/apt/*; \
+    fi && \
+    find /usr/lib \( -name 'IBM1390.so' -o -name 'IBM1399.so' \) -delete 2>/dev/null || true
 
 # Remove pip cache and bytecode to reduce image size
 RUN pip cache purge 2>/dev/null || true && \
