@@ -74,14 +74,14 @@ jobs:
 
       # ── Registry Authentication ──────────────────────────────────
       - name: Log in to GitHub Container Registry
-        uses: docker/login-action@v3
+        uses: docker/login-action@v4
         with:
           registry: ${{ env.GHCR_REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Log in to Docker Hub
-        uses: docker/login-action@v3
+        uses: docker/login-action@v4
         with:
           registry: ${{ env.DOCKERHUB_REGISTRY }}
           username: ${{ secrets.DOCKERHUB_USERNAME }}
