@@ -3,6 +3,14 @@
 #
 # Uses cosign keyless signing via GitHub Actions OIDC identity. Generates
 # an SBOM with syft and attaches it as an in-toto attestation to the image.
+# Signatures and SBOM attestations are recorded in Sigstore's Rekor
+# transparency log for public auditability.
+#
+# SLSA Level 3 provenance is generated separately by the build platform
+# (GitHub Actions) using actions/attest-build-provenance — it cannot be
+# produced by user-controlled scripts and remain Level 3. The CI workflows
+# call this script for signing + SBOM, then invoke attest-build-provenance
+# for platform-certified provenance.
 #
 # Usage:
 #   ./sign-and-attest.sh <image-ref>
@@ -13,6 +21,15 @@
 #   SBOM_FORMAT           — SBOM output format (default: spdx-json)
 #
 # Requires: cosign, syft, jq
+#
+# Verify a signed image:
+#   cosign verify \
+#     --certificate-identity-regexp "https://github.com/cascadeguard/.*" \
+#     --certificate-oidc-issuer "https://token.actions.githubusercontent.com" \
+#     <image-ref>
+#
+# Verify SLSA provenance (GitHub attestation):
+#   gh attestation verify oci://<image-ref> --owner cascadeguard
 #
 # Part of the CascadeGuard signing suite.
 # https://github.com/cascadeguard/open-secure-images

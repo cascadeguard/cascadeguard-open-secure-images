@@ -31,6 +31,7 @@ permissions:
   packages: write
   id-token: write        # Required for cosign keyless signing via OIDC
   security-events: write # Required for SARIF upload
+  attestations: write    # Required for SLSA provenance attestation
 
 env:
   REGISTRY: ghcr.io
@@ -176,8 +177,12 @@ jobs:
         uses: sigstore/cosign-installer@v3
 
       - name: Push image
+        id: push
         if: inputs.push_and_sign
-        run: docker push "${{ steps.meta.outputs.full_image }}"
+        run: |
+          docker push "${{ steps.meta.outputs.full_image }}"
+          DIGEST=$(docker inspect --format='{{index .RepoDigests 0}}' "${{ steps.meta.outputs.full_image }}" | cut -d@ -f2)
+          echo "digest=${DIGEST}" >> "$GITHUB_OUTPUT"
 
       - name: Sign image and attach SBOM attestation
         if: inputs.push_and_sign
@@ -190,6 +195,14 @@ jobs:
             --predicate sbom.spdx.json \
             --type spdxjson \
             "${{ steps.meta.outputs.full_image }}"
+
+      - name: Generate SLSA provenance attestation
+        if: inputs.push_and_sign
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-name: ${{ env.IMAGE_PREFIX }}/${{ inputs.image_name }}
+          subject-digest: ${{ steps.push.outputs.digest }}
+          push-to-registry: true
 
       # ── Cleanup ──────────────────────────────────────────────────
       - name: Clean up build context
