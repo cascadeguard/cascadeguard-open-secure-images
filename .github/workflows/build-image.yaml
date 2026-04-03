@@ -42,14 +42,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v4
+        uses: docker/setup-buildx-action@4d04d5d9486b7bd6fa91e7baf45bbb4f8b9deedd # v4
 
       - name: Log in to GitHub Container Registry
         if: inputs.push_and_sign
-        uses: docker/login-action@v4
+        uses: docker/login-action@4907a6ddec9925e35a0a9e82d7399ccc52663121 # v4
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
@@ -65,7 +65,7 @@ jobs:
         run: cp -r shared images/${{ inputs.image_path }}/shared
 
       - name: Build image
-        uses: docker/build-push-action@v7
+        uses: docker/build-push-action@d08e5c354a6adb9ed34480a06d141179aa583294 # v7
         with:
           context: images/${{ inputs.image_path }}
           file: images/${{ inputs.image_path }}/Dockerfile
@@ -97,7 +97,7 @@ jobs:
       # reports "N configurations not found" because it can't distinguish them.
       - name: Upload Grype SARIF results
         if: always()
-        uses: github/codeql-action/upload-sarif@v4
+        uses: github/codeql-action/upload-sarif@c10b8064de6f491fea524254123dbe5e09572f13 # v4
         with:
           sarif_file: grype-results.sarif
           category: grype-${{ inputs.image_name }}
@@ -108,7 +108,7 @@ jobs:
       # Trivy provides a cross-check using a different database; its results
       # are uploaded as an artifact for comparison but do not gate the build.
       - name: Run Trivy vulnerability scan
-        uses: aquasecurity/trivy-action@master
+        uses: aquasecurity/trivy-action@57a97c7e7821a5776cebc9bb87c984fa69cba8f1 # master
         with:
           image-ref: ${{ steps.meta.outputs.full_image }}
           format: json
@@ -119,7 +119,7 @@ jobs:
 
       - name: Upload Trivy results artifact
         if: always()
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7
         with:
           name: trivy-${{ inputs.image_name }}-${{ inputs.image_tag }}
           path: trivy-results.json
@@ -149,7 +149,7 @@ jobs:
             --output cyclonedx-json=sbom.cyclonedx.json
 
       - name: Upload SBOM artifact
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7
         with:
           name: sbom-${{ inputs.image_name }}-${{ inputs.image_tag }}
           path: |
@@ -177,7 +177,7 @@ jobs:
       # ── Sign & Push ──────────────────────────────────────────────
       - name: Install Cosign
         if: inputs.push_and_sign
-        uses: sigstore/cosign-installer@v3
+        uses: sigstore/cosign-installer@398d4b0eeef1380460a10c8013a76f728fb906ac # v3
 
       - name: Push image
         id: push
@@ -206,7 +206,7 @@ jobs:
 
       - name: Generate SLSA provenance attestation
         if: inputs.push_and_sign
-        uses: actions/attest-build-provenance@v2
+        uses: actions/attest-build-provenance@e8998f949152b193b063cb0ec769d69d929409be # v2
         with:
           subject-name: ${{ env.IMAGE_PREFIX }}/${{ inputs.image_name }}
           subject-digest: ${{ steps.push.outputs.digest }}
