@@ -123,7 +123,9 @@ jobs:
 
       # ── Scan ────────────────────────────────────────────────────
       - name: Install Grype
-        uses: anchore/setup-grype@v1
+        # anchore/setup-grype does not exist as a public repo; install directly
+        # from a pinned release tag to avoid supply-chain risk.
+        run: curl -sSfL https://raw.githubusercontent.com/anchore/grype/v0.110.0/install.sh | sh -s -- -b /usr/local/bin v0.110.0
 
       - name: Scan released image
         run: |
@@ -133,7 +135,9 @@ jobs:
 
       # ── SBOM ────────────────────────────────────────────────────
       - name: Install Syft
-        uses: anchore/setup-syft@v2
+        # anchore/setup-syft does not exist as a public repo; install directly
+        # from a pinned release tag to avoid supply-chain risk.
+        run: curl -sSfL https://raw.githubusercontent.com/anchore/syft/v1.42.3/install.sh | sh -s -- -b /usr/local/bin v1.42.3
 
       - name: Generate SBOM
         run: |
