@@ -21,6 +21,16 @@ RUN chmod +x /tmp/*.sh && \
     /tmp/strip-shells.sh && \
     rm -rf /tmp/*.sh /var/lib/apt/lists/* /var/cache/apt/*
 
+# Security hardening: remove packages and files not needed at runtime
+# CVE-2025-69720: ncurses-bin contains infocmp with a stack buffer overflow.
+#   The CLI tools (infocmp, tput, captoinfo) are not required in a Python runtime.
+# CVE-2026-4046: iconv() can crash when converting IBM1390/IBM1399 character sets.
+#   These mainframe encoding gconv modules are never needed in a Python container.
+RUN apt-get update && \
+    apt-get purge -y --auto-remove ncurses-bin && \
+    rm -rf /var/lib/apt/lists/* /var/cache/apt/* && \
+    find /usr/lib -name 'IBM1390.so' -o -name 'IBM1399.so' | xargs rm -f
+
 # Remove pip cache and bytecode to reduce image size
 RUN pip cache purge 2>/dev/null || true && \
     find /usr/local/lib/python3.12 -type d -name __pycache__ -exec rm -rf {} + 2>/dev/null || true && \
