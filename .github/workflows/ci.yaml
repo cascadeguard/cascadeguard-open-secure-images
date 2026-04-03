@@ -17,10 +17,6 @@ on:
       - ".github/workflows/build-image.yaml"
   pull_request:
     branches: [main]
-    paths:
-      - "images/**"
-      - "shared/**"
-      - "images.yaml"
   workflow_dispatch:
     inputs:
       image_filter:
