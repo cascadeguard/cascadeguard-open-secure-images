@@ -1,0 +1,13 @@
+# Default: security team reviews all changes
+* @cascadeguard/security-team
+
+# Security policies require explicit review
+policy/ @cascadeguard/security-team
+SECURITY.md @cascadeguard/security-team
+CVE-STRATEGY.md @cascadeguard/security-team
+
+# CI/CD workflows require explicit review
+.github/workflows/ @cascadeguard/security-team
+
+# Hardening scripts require explicit review
+shared/hardening/ @cascadeguard/security-team
