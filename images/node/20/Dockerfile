@@ -27,11 +27,15 @@ RUN npm cache clean --force 2>/dev/null || true && \
     # Remove corepack — not needed in production base images
     rm -f /usr/local/bin/corepack || true
 
-# Set secure filesystem permissions on node binaries
-RUN chmod 755 /usr/local/bin/node && \
+# Set secure filesystem permissions on node binaries.
+# Apply chmod 644 to all node_module files first, then re-apply 755 to
+# executables — the broad 644 would otherwise strip the execute bit from
+# npm's bin script (which /usr/local/bin/npm symlinks into node_modules).
+RUN find /usr/local/lib/node_modules -type d -exec chmod 755 {} + && \
+    find /usr/local/lib/node_modules -type f -exec chmod 644 {} + && \
+    chmod 755 /usr/local/bin/node && \
     chmod 755 /usr/local/bin/npm && \
-    find /usr/local/lib/node_modules -type d -exec chmod 755 {} + && \
-    find /usr/local/lib/node_modules -type f -exec chmod 644 {} +
+    find /usr/local/lib/node_modules/npm/bin -type f -exec chmod 755 {} +
 
 USER nonroot
 WORKDIR /app
