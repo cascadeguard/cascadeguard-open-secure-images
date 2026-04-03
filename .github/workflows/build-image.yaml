@@ -64,7 +64,7 @@ jobs:
         run: cp -r shared images/${{ inputs.image_path }}/shared
 
       - name: Build image
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v7
         with:
           context: images/${{ inputs.image_path }}
           file: images/${{ inputs.image_path }}/Dockerfile
