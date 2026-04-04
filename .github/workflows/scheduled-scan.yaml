@@ -133,7 +133,7 @@ jobs:
       - name: Commit vulnerability report
         run: |
           git config user.name "cascadeguard-bot"
-          git config user.email "bot@cascadeguard.dev"
+          git config user.email "bot@cascadeguard.com"
           git add "images/${{ matrix.name }}/reports/"
           if git diff --cached --quiet; then
             echo "No changes to commit"
