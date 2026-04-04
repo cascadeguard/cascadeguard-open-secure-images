@@ -143,7 +143,8 @@ jobs:
       - name: Generate SBOM
         run: |
           syft "${{ env.IMAGE_PREFIX_GHCR }}/${{ matrix.name }}:${{ matrix.tag }}" \
-            --output spdx-json=sbom-${{ matrix.name }}.spdx.json
+            --output spdx-json=sbom-${{ matrix.name }}.spdx.json \
+            --output cyclonedx-json=sbom-${{ matrix.name }}.cyclonedx.json
 
       # ── Sign ────────────────────────────────────────────────────
       - name: Install Cosign
@@ -163,6 +164,12 @@ jobs:
           cosign attest --yes \
             --predicate sbom-${{ matrix.name }}.spdx.json \
             --type spdxjson \
+            "${{ env.IMAGE_PREFIX_GHCR }}/${{ matrix.name }}:${{ matrix.tag }}"
+
+          # Attach SBOM as OCI artifact on GHCR (discoverable via cosign download sbom)
+          cosign attach sbom \
+            --sbom sbom-${{ matrix.name }}.spdx.json \
+            --type spdx \
             "${{ env.IMAGE_PREFIX_GHCR }}/${{ matrix.name }}:${{ matrix.tag }}"
 
           # Sign on Docker Hub
@@ -269,5 +276,7 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           generate_release_notes: true
-          files: sboms/*.spdx.json
+          files: |
+            sboms/*.spdx.json
+            sboms/*.cyclonedx.json
           body_path: release-body.md
