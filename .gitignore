@@ -43,6 +43,9 @@ grype-results.*
 trivy-results.*
 sbom*.json
 
+# ── Committed reports (tracked — stored in images/<name>/reports/) ──
+# Reports are committed by the scheduled scan workflow alongside each image.
+
 # ── Temporary files ──────────────────────────────────────────────────
 tmp/
 *.tmp

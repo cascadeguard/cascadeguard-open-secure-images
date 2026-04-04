@@ -1,0 +1,22 @@
+schemaVersion: "2.0.0"
+
+metadataTest:
+  user: "postgres"
+  workdir: "/var/lib/postgresql"
+
+commandTests:
+  - name: "postgres binary is present"
+    command: "postgres"
+    args: ["--version"]
+    expectedOutput: ["PostgreSQL 16"]
+    exitCode: 0
+
+  - name: "pg_isready is available"
+    command: "pg_isready"
+    args: ["--help"]
+    exitCode: 0
+
+fileExistenceTests:
+  - name: "/var/lib/postgresql exists"
+    path: "/var/lib/postgresql"
+    shouldExist: true

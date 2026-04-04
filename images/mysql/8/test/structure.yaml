@@ -1,0 +1,23 @@
+schemaVersion: "2.0.0"
+
+metadataTest:
+  user: "mysql"
+  workdir: "/var/lib/mysql"
+
+commandTests:
+  - name: "mysql binary is present"
+    command: "mysql"
+    args: ["--version"]
+    expectedOutput: ["mysql  Ver 8\\."]
+    exitCode: 0
+
+  - name: "mysqladmin is available"
+    command: "mysqladmin"
+    args: ["--version"]
+    expectedOutput: ["mysqladmin  Ver"]
+    exitCode: 0
+
+fileExistenceTests:
+  - name: "/var/lib/mysql exists"
+    path: "/var/lib/mysql"
+    shouldExist: true
