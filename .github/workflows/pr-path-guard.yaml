@@ -1,0 +1,34 @@
+# CascadeGuard — PR Sensitive Path Guard
+#
+# Blocks pull requests from committing internal/private paths (e.g. .ai/,
+# docs/plans/, artifacts/) to this public repository.
+#
+# Uses the shared block-sensitive-paths action from this repository.
+# Other CascadeGuard public repos can reference it with:
+#
+#   uses: cascadeguard/cascadeguard-open-secure-images/.github/actions/block-sensitive-paths@main
+
+name: PR Path Guard
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  block-sensitive-paths:
+    name: Block sensitive paths
+    runs-on: ubuntu-latest
+    steps:
+      - name: Block sensitive paths
+        uses: ./.github/actions/block-sensitive-paths
+        with:
+          blocked-paths: |
+            .ai/
+            docs/plans/
+            artifacts/
+          github-token: ${{ secrets.GITHUB_TOKEN }}

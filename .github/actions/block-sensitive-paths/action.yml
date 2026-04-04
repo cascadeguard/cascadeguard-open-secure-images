@@ -1,0 +1,107 @@
+name: 'Block Sensitive Paths'
+description: >
+  Rejects pull requests that touch private/internal directories that must not
+  appear in public repositories. Runs on PR events and fails the check with a
+  clear error listing the offending files and the reason they are blocked.
+author: 'CascadeGuard'
+branding:
+  icon: 'shield'
+  color: 'red'
+
+inputs:
+  blocked-paths:
+    description: |
+      Newline-separated list of path prefixes to block.
+      A trailing slash (e.g. ".ai/") matches any file inside that directory.
+      An exact string without a trailing slash matches only that specific file.
+    required: false
+    default: |
+      .ai/
+      docs/plans/
+      artifacts/
+  github-token:
+    description: >
+      GitHub token used to list PR changed files via the REST API.
+      Defaults to the built-in GITHUB_TOKEN.
+    required: false
+    default: ${{ github.token }}
+
+runs:
+  using: composite
+  steps:
+    - name: Check for sensitive paths
+      shell: bash
+      env:
+        GH_TOKEN: ${{ inputs.github-token }}
+        INPUT_BLOCKED_PATHS: ${{ inputs.blocked-paths }}
+        PR_NUMBER: ${{ github.event.pull_request.number }}
+        REPO: ${{ github.repository }}
+      run: |
+        set -euo pipefail
+
+        # Parse blocked path patterns — strip blank lines and # comments
+        mapfile -t BLOCKED < <(
+          printf '%s\n' "$INPUT_BLOCKED_PATHS" \
+            | grep -v '^\s*#' \
+            | grep -v '^\s*$' \
+            | sed 's/[[:space:]]*$//'
+        )
+
+        if [[ ${#BLOCKED[@]} -eq 0 ]]; then
+          echo "No blocked paths configured — skipping check."
+          exit 0
+        fi
+
+        echo "Blocked path patterns (${#BLOCKED[@]}):"
+        printf '  • %s\n' "${BLOCKED[@]}"
+        echo ""
+
+        # Fetch every changed filename in this PR via the GitHub REST API.
+        # --paginate handles PRs with more than 30 changed files.
+        mapfile -t CHANGED_FILES < <(
+          gh api "repos/${REPO}/pulls/${PR_NUMBER}/files" \
+            --paginate \
+            --jq '.[].filename'
+        )
+
+        echo "Scanning ${#CHANGED_FILES[@]} changed file(s)..."
+
+        VIOLATIONS=()
+        for file in "${CHANGED_FILES[@]}"; do
+          for pattern in "${BLOCKED[@]}"; do
+            if [[ "$file" == "$pattern" ]]; then
+              # Exact file match
+              VIOLATIONS+=("$file (matched: '$pattern')")
+              break
+            elif [[ "${pattern: -1}" == "/" && "$file" == "${pattern}"* ]]; then
+              # Directory prefix match (pattern ends with /)
+              VIOLATIONS+=("$file (matched directory: '$pattern')")
+              break
+            fi
+          done
+        done
+
+        if [[ ${#VIOLATIONS[@]} -gt 0 ]]; then
+          echo ""
+          echo "::error::This pull request modifies files in directories that must not appear in the public repository."
+          echo ""
+          echo "Blocked files detected:"
+          for v in "${VIOLATIONS[@]}"; do
+            filename="${v%% (*}"
+            echo "  ✗ $v"
+            echo "::error file=${filename}::File is in a blocked directory and must not be committed to this public repository."
+          done
+          echo ""
+          echo "The following path patterns are restricted in this repository:"
+          printf '  • %s\n' "${BLOCKED[@]}"
+          echo ""
+          echo "These paths contain internal tooling, development plans, or generated"
+          echo "artifacts that are not intended to be publicly visible."
+          echo ""
+          echo "Please remove these files from your pull request before re-requesting review."
+          echo "If you believe this restriction is incorrect, open an issue or contact"
+          echo "the repository maintainers."
+          exit 1
+        fi
+
+        echo "✓ All ${#CHANGED_FILES[@]} file(s) passed the sensitive-path check."
