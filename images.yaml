@@ -36,3 +36,41 @@
   registry: ghcr.io/cascadeguard
   image: debian
   tag: bookworm-slim
+
+# ── Managed free-tier images (CAS-135) ──────────────────────────────────────
+
+- name: ubuntu-22.04
+  dockerfile: images/ubuntu/Dockerfile
+  registry: ghcr.io/cascadeguard
+  image: ubuntu
+  tag: "22.04"
+
+- name: postgres-16
+  dockerfile: images/postgres/16/Dockerfile
+  registry: ghcr.io/cascadeguard
+  image: postgres
+  tag: "16"
+
+- name: redis-7.4-alpine
+  dockerfile: images/redis/7/Dockerfile
+  registry: ghcr.io/cascadeguard
+  image: redis
+  tag: 7.4-alpine
+
+- name: mysql-8.0
+  dockerfile: images/mysql/8/Dockerfile
+  registry: ghcr.io/cascadeguard
+  image: mysql
+  tag: "8.0"
+
+- name: golang-1.22-alpine
+  dockerfile: images/golang/1.22/Dockerfile
+  registry: ghcr.io/cascadeguard
+  image: golang
+  tag: 1.22-alpine
+
+- name: openjdk-21-slim
+  dockerfile: images/openjdk/21/Dockerfile
+  registry: ghcr.io/cascadeguard
+  image: openjdk
+  tag: 21-slim

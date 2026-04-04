@@ -1,0 +1,27 @@
+schemaVersion: "2.0.0"
+
+metadataTest:
+  user: "nonroot"
+  workdir: "/app"
+
+commandTests:
+  - name: "nonroot user exists with UID 65532"
+    command: "id"
+    args: ["-u", "nonroot"]
+    expectedOutput: ["65532"]
+    exitCode: 0
+
+  - name: "bash is available (ubuntu base)"
+    command: "bash"
+    args: ["--version"]
+    expectedOutput: ["GNU bash"]
+    exitCode: 0
+
+fileExistenceTests:
+  - name: "/app directory exists"
+    path: "/app"
+    shouldExist: true
+
+  - name: "/etc/os-release is present"
+    path: "/etc/os-release"
+    shouldExist: true

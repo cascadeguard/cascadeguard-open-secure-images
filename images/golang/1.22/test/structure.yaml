@@ -1,0 +1,33 @@
+schemaVersion: "2.0.0"
+
+metadataTest:
+  user: "nonroot"
+  workdir: "/app"
+
+commandTests:
+  - name: "Go 1.22 is installed and accessible"
+    command: "go"
+    args: ["version"]
+    expectedOutput: ["go1\\.22"]
+    exitCode: 0
+
+  - name: "nonroot user exists with UID 65532"
+    command: "id"
+    args: ["-u", "nonroot"]
+    expectedOutput: ["65532"]
+    exitCode: 0
+
+  - name: "CGO_ENABLED is 0"
+    command: "sh"
+    args: ["-c", "echo $CGO_ENABLED"]
+    expectedOutput: ["0"]
+    exitCode: 0
+
+fileExistenceTests:
+  - name: "/app directory exists"
+    path: "/app"
+    shouldExist: true
+
+  - name: "go binary exists"
+    path: "/usr/local/go/bin/go"
+    shouldExist: true

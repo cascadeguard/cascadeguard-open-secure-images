@@ -1,0 +1,23 @@
+schemaVersion: "2.0.0"
+
+metadataTest:
+  user: "redis"
+  workdir: "/data"
+
+commandTests:
+  - name: "redis-server binary is present"
+    command: "redis-server"
+    args: ["--version"]
+    expectedOutput: ["Redis server v=7\\."]
+    exitCode: 0
+
+  - name: "redis-cli binary is present"
+    command: "redis-cli"
+    args: ["--version"]
+    expectedOutput: ["redis-cli 7\\."]
+    exitCode: 0
+
+fileExistenceTests:
+  - name: "/data directory exists"
+    path: "/data"
+    shouldExist: true

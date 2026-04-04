@@ -1,0 +1,23 @@
+schemaVersion: "2.0.0"
+
+metadataTest:
+  user: "nonroot"
+  workdir: "/app"
+
+commandTests:
+  - name: "Java 21 is installed and accessible"
+    command: "java"
+    args: ["-version"]
+    expectedOutput: ["openjdk version \"21"]
+    exitCode: 0
+
+  - name: "nonroot user exists with UID 65532"
+    command: "id"
+    args: ["-u", "nonroot"]
+    expectedOutput: ["65532"]
+    exitCode: 0
+
+fileExistenceTests:
+  - name: "/app directory exists"
+    path: "/app"
+    shouldExist: true
