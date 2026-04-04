@@ -4,8 +4,9 @@
 # The image matrix is generated at runtime from images.yaml — no hardcoded
 # image list. Adding an image to images.yaml automatically enrolls it here.
 #
-# Scan processing (reports + per-CVE issues) is handled by the CascadeGuard
-# CLI — see `cascadeguard scan-report` and `cascadeguard scan-issues`.
+# Scan processing (reports + per-CVE issues) is delegated to composite
+# actions from cascadeguard/cascadeguard-actions, which handle CLI
+# installation internally.
 
 name: Scheduled Vulnerability Scan
 
@@ -24,7 +25,6 @@ permissions:
 env:
   REGISTRY: ghcr.io
   IMAGE_PREFIX: ghcr.io/${{ github.repository_owner }}
-  CASCADEGUARD_VERSION: "v0.1.0"
 
 jobs:
   # ── Matrix Generation ────────────────────────────────────────────
@@ -119,19 +119,15 @@ jobs:
           severity: "CRITICAL,HIGH"
         continue-on-error: true
 
-      # ── Install CascadeGuard CLI ────────────────────────────────
-      - name: Install CascadeGuard CLI
-        run: |
-          pip install --quiet git+https://github.com/cascadeguard/cascadeguard.git@${{ env.CASCADEGUARD_VERSION }}#subdirectory=app
-
       # ── Generate diffable report ────────────────────────────────
       - name: Generate vulnerability report
-        run: |
-          cascadeguard scan-report \
-            --grype grype-results.json \
-            --trivy trivy-results.json \
-            --image "${{ matrix.name }}" \
-            --dir "images/${{ matrix.name }}/reports"
+        id: report
+        uses: cascadeguard/cascadeguard-actions/scan-report@5cec3323e5d6992f1b3a44516d75c09ceee10db8
+        with:
+          grype-results: grype-results.json
+          trivy-results: trivy-results.json
+          image: ${{ matrix.name }}:${{ matrix.tag }}
+          output-dir: images/${{ matrix.name }}/reports
 
       # ── Commit report to repo ───────────────────────────────────
       - name: Commit vulnerability report
@@ -148,15 +144,15 @@ jobs:
 
       # ── Create/update per-CVE GitHub issues ─────────────────────
       - name: Create or update CVE issues
-        run: |
-          cascadeguard scan-issues \
-            --grype grype-results.json \
-            --trivy trivy-results.json \
-            --image "${{ matrix.name }}" \
-            --tag "${{ matrix.tag }}" \
-            --repo "${{ github.repository }}"
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        if: steps.report.outputs.critical-count > 0 || steps.report.outputs.high-count > 0
+        uses: cascadeguard/cascadeguard-actions/scan-issues@5cec3323e5d6992f1b3a44516d75c09ceee10db8
+        with:
+          grype-results: grype-results.json
+          trivy-results: trivy-results.json
+          image: ${{ matrix.name }}
+          tag: ${{ matrix.tag }}
+          repo: ${{ github.repository }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Upload scan artifacts
         if: always()
