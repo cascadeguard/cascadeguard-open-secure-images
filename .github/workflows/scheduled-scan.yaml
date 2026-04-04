@@ -129,19 +129,6 @@ jobs:
           image: ${{ matrix.name }}:${{ matrix.tag }}
           output-dir: images/${{ matrix.name }}/reports
 
-      # ── Commit report to repo ───────────────────────────────────
-      - name: Commit vulnerability report
-        run: |
-          git config user.name "cascadeguard-bot"
-          git config user.email "bot@cascadeguard.com"
-          git add "images/${{ matrix.name }}/reports/"
-          if git diff --cached --quiet; then
-            echo "No changes to commit"
-          else
-            git commit -m "chore: update vulnerability report for ${{ matrix.name }}"
-            git push
-          fi
-
       # ── Create/update per-CVE GitHub issues ─────────────────────
       - name: Create or update CVE issues
         if: steps.report.outputs.critical-count > 0 || steps.report.outputs.high-count > 0
