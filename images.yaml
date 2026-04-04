@@ -1,76 +1,400 @@
 # CascadeGuard enrolment file for cascadeguard-open-secure-images
 #
-# This file registers the hardened base images with CascadeGuard so it can:
-# - Discover base image dependencies from each Dockerfile
-# - Track upstream changes and trigger automated rebuilds
-# - Generate state files for the dependency graph
+# Single source of truth for all 25 images tracked by CascadeGuard.
+# Consolidates Dockerfile/CI config (CAS-135) and catalog metadata (CAS-134).
 #
-# https://github.com/cascadeguard/cascadeguard
+# Managed (enabled: true, default): CascadeGuard publishes a hardened,
+# signed build to ghcr.io/cascadeguard. CI + state resources are generated.
+#
+# Upstream tracked (enabled: false): CVE posture is monitored and surfaced
+# in the dashboard, but no hardened build is published. No CI/state generated.
+#
+# Dashboard fields (pull_count, star_count, category, etc.) are stored here
+# until the D1 database migration is complete (CAS-113).
+#
+# Schema follows cascadeguard-exemplar conventions:
+#   https://github.com/cascadeguard/cascadeguard-exemplar/blob/main/images.yaml
 
-- name: python-3.12-slim
-  dockerfile: images/python/3.12/Dockerfile
-  registry: ghcr.io/cascadeguard
-  image: python
-  tag: 3.12-slim
+# ── Managed (10) ──────────────────────────────────────────────────────────────
 
-- name: node-20-slim
-  dockerfile: images/node/20/Dockerfile
-  registry: ghcr.io/cascadeguard
-  image: node
-  tag: 20-slim
-
-- name: nginx-stable-alpine-slim
+- name: nginx
   dockerfile: images/nginx/Dockerfile
   registry: ghcr.io/cascadeguard
   image: nginx
   tag: stable-alpine-slim
+  namespace: library
+  tier: free
+  category: web-server
+  pull_count: 12905229320
+  star_count: 21238
+  latest_stable_tags:
+    - "1.28"
+    - "1.28-alpine"
+    - "stable-alpine"
+  cve_count_approx: low
+  tier_rationale: "#1 most pulled image on Docker Hub. Every web developer knows nginx. Highest visibility for CascadeGuard."
 
-- name: alpine-3.20
+- name: alpine
   dockerfile: images/alpine/Dockerfile
   registry: ghcr.io/cascadeguard
   image: alpine
   tag: "3.20"
+  namespace: library
+  tier: free
+  category: base-os
+  pull_count: 11759412218
+  star_count: 11488
+  latest_stable_tags:
+    - "3.23.3"
+    - "3.23"
+    - "3.22"
+  cve_count_approx: very-low
+  tier_rationale: "Universal minimal base OS. Demonstrating alpine hardening is table-stakes for the CascadeGuard brand."
 
-- name: debian-bookworm-slim
-  dockerfile: images/debian-slim/Dockerfile
-  registry: ghcr.io/cascadeguard
-  image: debian
-  tag: bookworm-slim
-
-# ── Managed free-tier images (CAS-135) ──────────────────────────────────────
-
-- name: ubuntu-22.04
+- name: ubuntu
   dockerfile: images/ubuntu/Dockerfile
   registry: ghcr.io/cascadeguard
   image: ubuntu
   tag: "22.04"
+  namespace: library
+  tier: free
+  category: base-os
+  pull_count: 9845210896
+  star_count: 17805
+  latest_stable_tags:
+    - "24.04"
+    - "22.04"
+    - "20.04"
+  cve_count_approx: medium
+  tier_rationale: "Most widely used Linux distro. ubuntu:22.04 LTS is the enterprise standard base image."
 
-- name: postgres-16
+- name: python
+  dockerfile: images/python/3.12/Dockerfile
+  registry: ghcr.io/cascadeguard
+  image: python
+  tag: 3.12-slim
+  namespace: library
+  tier: free
+  category: runtime
+  pull_count: 8632398848
+  star_count: 10405
+  latest_stable_tags:
+    - "3.12-slim"
+    - "3.11-slim"
+    - "3.12-alpine"
+  cve_count_approx: medium
+  tier_rationale: "3rd most pulled. Python is the dominant ML/AI runtime — huge audience for a hardened Python image."
+
+- name: postgres
   dockerfile: images/postgres/16/Dockerfile
   registry: ghcr.io/cascadeguard
   image: postgres
   tag: "16"
+  namespace: library
+  tier: free
+  category: database
+  pull_count: 10454907507
+  star_count: 14863
+  latest_stable_tags:
+    - "16"
+    - "15"
+    - "14"
+  cve_count_approx: medium
+  tier_rationale: "2nd most pulled database. Default DB for most cloud-native stacks."
 
-- name: redis-7.4-alpine
+- name: redis
   dockerfile: images/redis/7/Dockerfile
   registry: ghcr.io/cascadeguard
   image: redis
   tag: 7.4-alpine
+  namespace: library
+  tier: free
+  category: cache
+  pull_count: 10513467929
+  star_count: 13552
+  latest_stable_tags:
+    - "8.0"
+    - "7.4"
+    - "7.4-alpine"
+  cve_count_approx: low
+  tier_rationale: "Ubiquitous cache layer. redis:alpine is already minimal; hardened version adds value."
 
-- name: mysql-8.0
+- name: node
+  dockerfile: images/node/20/Dockerfile
+  registry: ghcr.io/cascadeguard
+  image: node
+  tag: 20-slim
+  namespace: library
+  tier: free
+  category: runtime
+  pull_count: 6330529712
+  star_count: 14147
+  latest_stable_tags:
+    - "22-slim"
+    - "20-slim"
+    - "22-alpine"
+  cve_count_approx: medium-high
+  tier_rationale: "Default runtime for JS/TS backends. node:slim is widely used; hardened distroless variant is compelling."
+
+- name: mysql
   dockerfile: images/mysql/8/Dockerfile
   registry: ghcr.io/cascadeguard
   image: mysql
   tag: "8.0"
+  namespace: library
+  tier: free
+  category: database
+  pull_count: 4906941834
+  star_count: 16104
+  latest_stable_tags:
+    - "9.0"
+    - "8.4"
+    - "8.0"
+  cve_count_approx: medium
+  tier_rationale: "Most recognised database brand. Hardened mysql image addresses a real enterprise gap."
 
-- name: golang-1.22-alpine
+- name: golang
   dockerfile: images/golang/1.22/Dockerfile
   registry: ghcr.io/cascadeguard
   image: golang
   tag: 1.22-alpine
+  namespace: library
+  tier: free
+  category: runtime
+  pull_count: 2506545375
+  star_count: 5111
+  latest_stable_tags:
+    - "1.22-alpine"
+    - "1.22-bookworm"
+    - "1.21-alpine"
+  cve_count_approx: low
+  tier_rationale: "Growing fast. golang:alpine is the standard CI build image for Go projects."
 
-- name: openjdk-21-slim
+- name: openjdk
   dockerfile: images/openjdk/21/Dockerfile
   registry: ghcr.io/cascadeguard
   image: openjdk
   tag: 21-slim
+  namespace: library
+  tier: free
+  category: runtime
+  pull_count: 2606336606
+  star_count: 4115
+  latest_stable_tags:
+    - "21-slim"
+    - "17-slim"
+    - "21-jre-slim"
+  cve_count_approx: medium
+  tier_rationale: "Java runtime is mandatory for enterprise. openjdk:21 LTS is the current long-term target."
+
+# ── Upstream tracked (15) ─────────────────────────────────────────────────────
+# CVE posture monitored; no hardened build published.
+# enabled: false prevents CI/state generation for these entries.
+
+- name: memcached
+  enabled: false
+  namespace: library
+  tier: registered
+  category: cache
+  pull_count: 13093270037
+  star_count: 2439
+  latest_stable_tags:
+    - "1.6"
+    - "1.6-alpine"
+  cve_count_approx: low
+  tier_rationale: "Highest pull count of any registered-tier image but low star count signals automated pulls over developer community interest."
+
+- name: httpd
+  enabled: false
+  namespace: library
+  tier: registered
+  category: web-server
+  pull_count: 4694928712
+  star_count: 4927
+  latest_stable_tags:
+    - "2.4"
+    - "2.4-alpine"
+  cve_count_approx: medium
+  tier_rationale: "Apache httpd — legacy but still widely deployed. Good comparison target alongside nginx."
+
+- name: mongo
+  enabled: false
+  namespace: library
+  tier: registered
+  category: database
+  pull_count: 4729405592
+  star_count: 10714
+  latest_stable_tags:
+    - "7.0"
+    - "6.0"
+    - "7.0-jammy"
+  cve_count_approx: medium-high
+  tier_rationale: "Popular NoSQL DB. High pull count but commercial licensing concerns make registered-tier appropriate."
+
+- name: rabbitmq
+  enabled: false
+  namespace: library
+  tier: registered
+  category: messaging
+  pull_count: 3780068586
+  star_count: 5352
+  latest_stable_tags:
+    - "4.0"
+    - "4.0-alpine"
+    - "3.13-management"
+  cve_count_approx: medium
+  tier_rationale: "Dominant OSS message broker. Registered tier demonstrates queue infrastructure hardening."
+
+- name: traefik
+  enabled: false
+  namespace: library
+  tier: registered
+  category: proxy
+  pull_count: 3471658305
+  star_count: 3610
+  latest_stable_tags:
+    - "v3.2"
+    - "v2.11"
+    - "v3.2-alpine"
+  cve_count_approx: low
+  tier_rationale: "Modern cloud-native reverse proxy/ingress. Growing fast; hardened traefik is compelling for k8s users."
+
+- name: mariadb
+  enabled: false
+  namespace: library
+  tier: registered
+  category: database
+  pull_count: 3071304158
+  star_count: 6088
+  latest_stable_tags:
+    - "11.4"
+    - "10.11"
+    - "11.4-jammy"
+  cve_count_approx: medium
+  tier_rationale: "MySQL-compatible fork. Registered tier since mysql covers the primary use case in free tier."
+
+- name: grafana
+  enabled: false
+  namespace: grafana
+  tier: registered
+  category: observability
+  pull_count: 5179763759
+  star_count: 3526
+  latest_stable_tags:
+    - "11.0.0"
+    - "10.4.0"
+    - "10.3.0"
+  cve_count_approx: medium
+  tier_rationale: "Standard observability dashboard. Non-library namespace; registered tier appropriate."
+
+- name: php
+  enabled: false
+  namespace: library
+  tier: registered
+  category: runtime
+  pull_count: 1295174383
+  star_count: 7837
+  latest_stable_tags:
+    - "8.3-fpm-alpine"
+    - "8.2-fpm-alpine"
+    - "8.3-cli-alpine"
+  cve_count_approx: high
+  tier_rationale: "Massive legacy install base. CVE surface makes it a prime hardening showcase for registered users."
+
+- name: ruby
+  enabled: false
+  namespace: library
+  tier: registered
+  category: runtime
+  pull_count: 1536810340
+  star_count: 2403
+  latest_stable_tags:
+    - "3.3-slim"
+    - "3.2-alpine"
+    - "3.3-alpine"
+  cve_count_approx: medium
+  tier_rationale: "Rails ecosystem still significant. Complements the runtime catalog alongside python and node."
+
+- name: prometheus
+  enabled: false
+  namespace: prom
+  tier: registered
+  category: observability
+  pull_count: 1951156569
+  star_count: 2058
+  latest_stable_tags:
+    - "v2.52.0"
+    - "v2.51.0"
+    - "v2.50.0"
+  cve_count_approx: low
+  tier_rationale: "Paired with grafana in the observability stack. Non-library namespace; registered tier."
+
+- name: elasticsearch
+  enabled: false
+  namespace: library
+  tier: registered
+  category: search
+  pull_count: 947894350
+  star_count: 6591
+  latest_stable_tags:
+    - "8.13.0"
+    - "7.17.0"
+    - "8.12.0"
+  cve_count_approx: medium-high
+  tier_rationale: "Enterprise search/logging stack. Elastic licensing changes make registered tier appropriate."
+
+- name: haproxy
+  enabled: false
+  namespace: library
+  tier: registered
+  category: proxy
+  pull_count: 1115254535
+  star_count: 2012
+  latest_stable_tags:
+    - "3.0"
+    - "2.9"
+    - "3.0-alpine"
+  cve_count_approx: low
+  tier_rationale: "Proven load balancer used at scale. Lower community interest but high operational relevance."
+
+- name: tomcat
+  enabled: false
+  namespace: library
+  tier: registered
+  category: web-server
+  pull_count: 810616505
+  star_count: 3765
+  latest_stable_tags:
+    - "10.1"
+    - "9.0"
+    - "10.1-jre21"
+  cve_count_approx: medium
+  tier_rationale: "Java servlet container; heavy in enterprise Java shops. Complements openjdk in the free tier."
+
+- name: consul
+  enabled: false
+  namespace: hashicorp
+  tier: registered
+  category: secret-management
+  pull_count: 1053666241
+  star_count: 1458
+  latest_stable_tags:
+    - "1.18"
+    - "1.17"
+    - "1.18.1"
+  cve_count_approx: low
+  tier_rationale: "HashiCorp service mesh/discovery. Registered tier due to lower pull count vs vault and narrower audience."
+
+- name: vault
+  enabled: false
+  namespace: hashicorp
+  tier: registered
+  category: secret-management
+  pull_count: 551660962
+  star_count: 1176
+  latest_stable_tags:
+    - "1.16"
+    - "1.15"
+    - "1.16.1"
+  cve_count_approx: low
+  tier_rationale: "HashiCorp secrets manager. Lower absolute pulls but high enterprise value. BSL license shift reduces free-tier appeal."
