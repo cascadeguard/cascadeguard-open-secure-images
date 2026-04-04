@@ -4,8 +4,9 @@
 # The image matrix is generated at runtime from images.yaml — no hardcoded
 # image list. Adding an image to images.yaml automatically enrolls it here.
 #
-# Issues are created per CVE+package (not per image). Affected images are
-# tracked via labels. Reports are committed alongside each image's Dockerfile.
+# Architecture: scan jobs are read-only; a single collect-reports job
+# commits all vulnerability reports in one push to avoid race conditions
+# when matrix jobs run in parallel.
 
 name: Scheduled Vulnerability Scan
 
@@ -16,7 +17,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
   packages: read
   issues: write
   security-events: write
@@ -56,7 +57,7 @@ jobs:
           print(f'Scan matrix: {include}')
           PYEOF
 
-  # ── Per-Image Scan ───────────────────────────────────────────────
+  # ── Per-Image Scan (read-only) ───────────────────────────────────
   scan:
     needs: generate-matrix
     runs-on: ubuntu-latest
@@ -129,8 +130,8 @@ jobs:
           severity: "CRITICAL,HIGH"
         continue-on-error: true
 
-      # ── Commit reports to git ───────────────────────────────────
-      - name: Commit vulnerability reports
+      # ── Stage reports as artifacts (no git push here) ───────────
+      - name: Prepare report files
         run: |
           REPORT_DIR="${{ matrix.dir }}/reports"
           mkdir -p "$REPORT_DIR"
@@ -162,20 +163,16 @@ jobs:
             cp trivy-results.json "$REPORT_DIR/trivy-report.json" 2>/dev/null || true
           fi
 
-          # Only commit if the reports actually changed
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add "$REPORT_DIR/"
-          if git diff --cached --quiet; then
-            echo "No changes to vulnerability reports for ${{ matrix.name }}. Skipping commit."
-          else
-            git commit -m "chore(reports): update vulnerability report for ${{ matrix.name }}
-
-          Automated scan results from $(date -u +%Y-%m-%d).
-
-          Co-Authored-By: Paperclip <noreply@paperclip.ing>"
-            git push origin main
-          fi
+      - name: Upload report artifacts
+        if: always()
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7
+        with:
+          name: scan-results-${{ matrix.name }}
+          path: |
+            ${{ matrix.dir }}/reports/
+            grype-results.json
+            trivy-results.json
+          retention-days: 30
 
       # ── Per-CVE GitHub Issues ───────────────────────────────────
       - name: Create or update per-CVE issues
@@ -346,12 +343,68 @@ jobs:
             // Post step summary
             await core.summary.addRaw(summary).write();
 
-      - name: Upload scan artifacts
-        if: always()
-        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7
+  # ── Collect & Commit All Reports (single write) ──────────────────
+  collect-reports:
+    needs: [scan]
+    runs-on: ubuntu-latest
+    if: always()
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
-          name: scan-results-${{ matrix.name }}
-          path: |
-            grype-results.json
-            trivy-results.json
-          retention-days: 30
+          ref: main
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Download all scan artifacts
+        uses: actions/download-artifact@95815c38cf2ff2164869cbab79d8d6f6433c7a32 # v4
+        with:
+          pattern: scan-results-*
+          merge-multiple: false
+          path: artifacts/
+
+      - name: Copy reports into repo tree
+        run: |
+          # Each artifact is in artifacts/scan-results-<name>/
+          # The grype-report.json and trivy-report.json are nested under the image dir
+          # We need to copy them back to their report directories
+
+          shopt -s nullglob globstar
+          copied=0
+
+          for artifact_dir in artifacts/scan-results-*/; do
+            # Find report files (grype-report.json, trivy-report.json) inside nested dirs
+            while IFS= read -r -d '' report_file; do
+              # Reconstruct relative path from within artifact dir
+              rel="${report_file#"$artifact_dir"}"
+              # Only handle files inside a reports/ subdirectory
+              if [[ "$rel" == */reports/* ]]; then
+                dest="$rel"
+                mkdir -p "$(dirname "$dest")"
+                cp "$report_file" "$dest"
+                echo "Copied: $dest"
+                ((copied++)) || true
+              fi
+            done < <(find "$artifact_dir" -type f \( -name "grype-report.json" -o -name "trivy-report.json" \) -print0)
+          done
+
+          echo "Total report files staged: $copied"
+
+      - name: Commit and push all reports
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add "*/reports/"
+          if git diff --cached --quiet; then
+            echo "No changes to vulnerability reports. Skipping commit."
+          else
+            SCAN_DATE=$(date -u +%Y-%m-%d)
+            git commit -m "chore(reports): update vulnerability reports ${SCAN_DATE}
+
+          Automated scan results from ${SCAN_DATE}. Reports collected from
+          all parallel matrix jobs and committed in a single push.
+
+          Co-Authored-By: Paperclip <noreply@paperclip.ing>"
+            git push origin main
+          fi
