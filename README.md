@@ -123,6 +123,8 @@ See [`policy/cve-sla.yaml`](policy/cve-sla.yaml) for SLA targets and [`CVE-STRAT
 
 ## Contributing
 
+By contributing to this project, you agree that your contributions will be licensed under the [Business Source License 1.1](LICENSE).
+
 1. Fork the repository.
 2. Create a feature branch from `main`.
 3. Make your changes. If modifying a Dockerfile, update the corresponding `test/structure.yaml`.
@@ -143,4 +145,6 @@ See [`policy/cve-sla.yaml`](policy/cve-sla.yaml) for SLA targets and [`CVE-STRAT
 
 ## License
 
-This project is licensed under the Apache License 2.0. See [LICENSE](LICENSE) for details.
+The source code in this repository is licensed under the [Business Source License 1.1](LICENSE). The Additional Use Grant permits production use, provided such use does not include offering the Licensed Work to third parties as a commercial container image lifecycle management service or a managed image rebuild service. On the Change Date (2030-04-04), the license converts to Apache License 2.0.
+
+Published container image artifacts on GHCR and Docker Hub are free to pull and use in your own applications. See [IMAGE-TERMS.md](IMAGE-TERMS.md) for details on image artifact usage, including restrictions on redistribution and resale.
