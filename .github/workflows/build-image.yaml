@@ -80,7 +80,9 @@ jobs:
 
       # ── Scanning ─────────────────────────────────────────────────
       - name: Install Grype
-        run: curl -sSfL https://raw.githubusercontent.com/anchore/grype/main/install.sh | sh -s -- -b /usr/local/bin
+        uses: cascadeguard/cascadeguard-actions/setup-grype@7e39ae312b916fb978e8b5f51aab113ae1aebca0 # CAS-94
+        with:
+          version: v0.110.0
 
       # Run Grype once and write both SARIF (for GitHub Security tab) and JSON
       # (for policy evaluation). We do NOT pass --fail-on here — the policy gate
@@ -140,7 +142,9 @@ jobs:
 
       # ── SBOM Generation ──────────────────────────────────────────
       - name: Install Syft
-        run: curl -sSfL https://raw.githubusercontent.com/anchore/syft/main/install.sh | sh -s -- -b /usr/local/bin
+        uses: cascadeguard/cascadeguard-actions/setup-syft@7e39ae312b916fb978e8b5f51aab113ae1aebca0 # CAS-94
+        with:
+          version: v1.42.3
 
       - name: Generate SBOM
         run: |
