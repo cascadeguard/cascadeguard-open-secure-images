@@ -86,7 +86,9 @@ jobs:
 
       # ── Grype Scan ──────────────────────────────────────────────
       - name: Install Grype
-        run: curl -sSfL https://raw.githubusercontent.com/anchore/grype/main/install.sh | sh -s -- -b /usr/local/bin
+        uses: cascadeguard/cascadeguard-actions/setup-grype@7e39ae312b916fb978e8b5f51aab113ae1aebca0 # CAS-94
+        with:
+          version: v0.110.0
 
       - name: Scan with Grype
         id: grype
