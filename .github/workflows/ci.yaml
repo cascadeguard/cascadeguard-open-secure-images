@@ -104,6 +104,12 @@ jobs:
       push_and_sign: ${{ github.event_name != 'pull_request' }}
     secrets: inherit
 
+  # ── Actions Policy Enforcement ───────────────────────────────────
+  # Validates every workflow file against .cascadeguard/actions-policy.yaml.
+  # All external actions must be explicitly allowed — no unknown actions slip in.
+  policy:
+    uses: ./.github/workflows/enforce-actions-policy.yaml
+
   # ── Build Gate ───────────────────────────────────────────────────
   # Aggregates all matrix build results into a single required status check.
   # Require THIS job (not the matrix entries) in branch protection so that
