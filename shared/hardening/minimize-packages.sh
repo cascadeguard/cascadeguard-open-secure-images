@@ -25,6 +25,17 @@ is_debian() {
 if is_debian; then
   export DEBIAN_FRONTEND=noninteractive
 
+  # Apply all available security patches before removing packages.
+  # Upstream slim/distroless images pin to a base digest and do not run
+  # apt-get upgrade, so unpatched CVEs accumulate between digest bumps.
+  # Running upgrade here ensures every Debian-based image picks up the
+  # latest security fixes from the distribution's security repositories.
+  echo "  Applying upstream Debian security patches (apt-get upgrade)..."
+  apt-get update -qq
+  apt-get upgrade -y
+  apt-get clean
+  rm -rf /var/lib/apt/lists/* /var/cache/apt/*
+
   # Packages considered unnecessary in a production container
   PACKAGES_TO_REMOVE=(
     wget

@@ -13,6 +13,14 @@ LABEL org.opencontainers.image.source="https://github.com/cascadeguard/open-secu
 LABEL org.opencontainers.image.licenses="Apache-2.0"
 LABEL org.opencontainers.image.vendor="CascadeGuard"
 
+# Apply upstream Debian security patches before hardening.
+# node:20-slim pins to a base digest and does not run apt-get upgrade,
+# so unpatched CVEs accumulate between digest bumps (OSI #34: 18 HIGH CVEs).
+RUN apt-get update && \
+    apt-get upgrade -y && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/* /var/cache/apt/*
+
 COPY shared/hardening/minimize-packages.sh /tmp/
 COPY shared/hardening/strip-shells.sh /tmp/
 COPY shared/hardening/set-nonroot.sh /tmp/
