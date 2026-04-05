@@ -1,0 +1,104 @@
+# CascadeGuard — Platform-Triggered Rebuild Workflow
+#
+# Triggered by POST /api/images/:image_id/rebuild on the CascadeGuard platform,
+# which fires a GitHub repository_dispatch event with event_type "rebuild-image".
+#
+# client_payload fields:
+#   image_name       — matches the `image` field in images.yaml (e.g. "python")
+#   image_tag        — image tag (e.g. "3.12-slim")
+#   trigger          — reason for rebuild (upstream_change | cve_detected | sla_breach | manual | scheduled)
+#   reason           — optional human-readable description
+#   rebuild_event_id — UUID of the rebuild_events record in the platform DB
+#
+# The workflow locates the image in images.yaml, then calls the reusable
+# build-image.yaml pipeline to build, scan, test, sign, and push the image.
+
+name: Platform Rebuild
+
+on:
+  repository_dispatch:
+    types: [rebuild-image]
+
+permissions:
+  contents: read
+  packages: write
+  id-token: write        # cosign keyless signing via OIDC
+  security-events: write # SARIF upload
+  attestations: write    # SLSA provenance
+
+jobs:
+  # ── Resolve image from images.yaml ──────────────────────────────────────────
+  resolve:
+    runs-on: ubuntu-latest
+    outputs:
+      image_path: ${{ steps.resolve.outputs.image_path }}
+      image_name: ${{ steps.resolve.outputs.image_name }}
+      image_tag: ${{ steps.resolve.outputs.image_tag }}
+      found: ${{ steps.resolve.outputs.found }}
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+      - name: Resolve image from images.yaml
+        id: resolve
+        run: |
+          python3 - <<'PYEOF'
+          import yaml, json, os, sys
+
+          image_name = os.environ["INPUT_IMAGE_NAME"]
+          image_tag  = os.environ["INPUT_IMAGE_TAG"]
+
+          with open("images.yaml") as f:
+              images = yaml.safe_load(f)
+
+          match = None
+          for img in images:
+              if not img.get("enabled", True):
+                  continue
+              if img.get("image") == image_name:
+                  match = img
+                  break
+
+          if not match:
+              print(f"::error::Image '{image_name}' not found in images.yaml or is disabled.")
+              with open(os.environ["GITHUB_OUTPUT"], "a") as f:
+                  f.write("found=false\n")
+              sys.exit(0)
+
+          # Derive image_path from dockerfile:
+          # "images/python/3.12/Dockerfile" -> "python/3.12"
+          parts = match["dockerfile"].split("/")
+          image_path = "/".join(parts[1:-1])
+
+          tag = image_tag if image_tag else match["tag"]
+
+          print(f"Resolved: {image_name}:{tag} at images/{image_path}")
+
+          with open(os.environ["GITHUB_OUTPUT"], "a") as f:
+              f.write(f"image_path={image_path}\n")
+              f.write(f"image_name={image_name}\n")
+              f.write(f"image_tag={tag}\n")
+              f.write("found=true\n")
+          PYEOF
+        env:
+          INPUT_IMAGE_NAME: ${{ github.event.client_payload.image_name }}
+          INPUT_IMAGE_TAG: ${{ github.event.client_payload.image_tag }}
+
+      - name: Log rebuild context
+        run: |
+          echo "Rebuild triggered by platform"
+          echo "  image:             ${{ github.event.client_payload.image_name }}:${{ github.event.client_payload.image_tag }}"
+          echo "  trigger:           ${{ github.event.client_payload.trigger }}"
+          echo "  reason:            ${{ github.event.client_payload.reason }}"
+          echo "  rebuild_event_id:  ${{ github.event.client_payload.rebuild_event_id }}"
+
+  # ── Build, scan, sign, push ──────────────────────────────────────────────────
+  build:
+    needs: [resolve]
+    if: needs.resolve.outputs.found == 'true'
+    uses: ./.github/workflows/build-image.yaml
+    with:
+      image_path: ${{ needs.resolve.outputs.image_path }}
+      image_name: ${{ needs.resolve.outputs.image_name }}
+      image_tag: ${{ needs.resolve.outputs.image_tag }}
+      push_and_sign: true
+    secrets: inherit
