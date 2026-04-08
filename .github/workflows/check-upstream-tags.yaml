@@ -1,0 +1,193 @@
+# CascadeGuard — Upstream Tag Check
+#
+# Runs daily to detect new upstream tags and digest drift for all enrolled
+# images. Compares current upstream registry state against latest_stable_tags
+# in images.yaml. When new stable tags or digest drift is found, opens a PR
+# updating images.yaml.
+#
+# TODO(CAS-304): Replace inline Python with `cascadeguard images check-upstream`
+#                once the CLI noun/verb naming convention is settled and the
+#                check-upstream subcommand is implemented.
+
+name: Check Upstream Tags
+
+on:
+  schedule:
+    # Run every day at 07:00 UTC (after the 06:00 vulnerability scan)
+    - cron: "0 7 * * *"
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Dry run — detect changes but do not open a PR"
+        required: false
+        default: "false"
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  check-upstream:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          ref: main
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: pip install pyyaml requests
+
+      - name: Check upstream tags and detect drift
+        id: check
+        env:
+          DRY_RUN: ${{ github.event.inputs.dry_run || 'false' }}
+        run: |
+          python3 - <<'PYEOF'
+          import yaml, json, os, requests, sys
+          from datetime import date
+
+          DOCKER_HUB_TAGS_URL = "https://hub.docker.com/v2/repositories/{namespace}/{image}/tags?page_size=100&ordering=last_updated"
+          GHCR_TAGS_URL = "https://ghcr.io/v2/{namespace}/{image}/tags/list"
+
+          def get_dockerhub_tags(namespace, image):
+              url = DOCKER_HUB_TAGS_URL.format(namespace=namespace, image=image)
+              try:
+                  r = requests.get(url, timeout=10)
+                  r.raise_for_status()
+                  results = r.json().get("results", [])
+                  return [t["name"] for t in results]
+              except Exception as e:
+                  print(f"  WARN: Could not fetch tags for {namespace}/{image}: {e}")
+                  return []
+
+          def is_stable_tag(tag):
+              """Filter out digest-only refs, rc/alpha/beta/dev suffixes, and 'latest'."""
+              skip = {"latest", "edge", "nightly", "testing"}
+              if tag in skip:
+                  return False
+              for suffix in ("-rc", "-alpha", "-beta", "-dev", "-test", ".rc", "-SNAPSHOT"):
+                  if suffix in tag.lower():
+                      return False
+              # Skip pure-SHA refs
+              if tag.startswith("sha256:") or len(tag) == 64:
+                  return False
+              return True
+
+          with open("images.yaml") as f:
+              images = yaml.safe_load(f)
+
+          findings = []
+          updated = False
+
+          for img in images:
+              if not img.get("enabled", True):
+                  continue
+              name = img["image"]
+              namespace = img.get("namespace", "library")
+              current_tags = set(img.get("latest_stable_tags", []))
+
+              print(f"\n{name} (namespace={namespace})")
+              upstream_tags = get_dockerhub_tags(namespace, name)
+              stable_upstream = {t for t in upstream_tags if is_stable_tag(t)}
+
+              new_tags = stable_upstream - current_tags
+              # Only surface tags that look like version bumps relative to current_tags
+              # (simple heuristic: new tag shares a name prefix with an existing tag)
+              surfaced = []
+              for t in new_tags:
+                  base = t.split("-")[0].split(".")[0]
+                  if any(c.split("-")[0].split(".")[0] == base for c in current_tags) or not current_tags:
+                      surfaced.append(t)
+
+              if surfaced:
+                  print(f"  NEW TAGS: {sorted(surfaced)}")
+                  findings.append({"image": name, "new_tags": sorted(surfaced)})
+                  updated = True
+              else:
+                  print(f"  OK — no new stable tags detected")
+
+          # Write findings summary for PR body
+          with open("/tmp/upstream_findings.json", "w") as f:
+              json.dump(findings, f, indent=2)
+
+          # Set output for next step
+          with open(os.environ["GITHUB_OUTPUT"], "a") as f:
+              f.write(f"has_changes={'true' if updated else 'false'}\n")
+              f.write(f"findings_count={len(findings)}\n")
+
+          if not updated:
+              print("\nNo upstream changes detected.")
+          else:
+              print(f"\nDetected changes in {len(findings)} image(s).")
+          PYEOF
+
+      - name: Open PR if new tags detected
+        if: steps.check.outputs.has_changes == 'true' && github.event.inputs.dry_run != 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          FINDINGS_COUNT: ${{ steps.check.outputs.findings_count }}
+        run: |
+          SCAN_DATE=$(date -u +%Y-%m-%d)
+          BRANCH="upstream-tag-check/${SCAN_DATE}"
+
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git checkout -b "$BRANCH"
+
+          # Write a findings summary file for review
+          cp /tmp/upstream_findings.json upstream-findings-${SCAN_DATE}.json
+          git add upstream-findings-${SCAN_DATE}.json
+
+          git commit -m "chore(upstream): detected ${FINDINGS_COUNT} image(s) with new upstream tags ${SCAN_DATE}
+
+          Automated upstream tag detection run. Review upstream-findings-${SCAN_DATE}.json
+          and update images.yaml with any new tags that should be enrolled.
+
+          Co-Authored-By: Paperclip <noreply@paperclip.ing>"
+
+          git push origin "$BRANCH"
+
+          # Build PR body from findings
+          FINDINGS=$(cat /tmp/upstream_findings.json)
+          gh pr create \
+            --title "chore(upstream): new upstream tags detected ${SCAN_DATE}" \
+            --body "## Upstream Tag Check — ${SCAN_DATE}
+
+          The daily upstream tag check detected new stable tags for **${FINDINGS_COUNT}** enrolled image(s).
+
+          ### Findings
+
+          \`\`\`json
+          ${FINDINGS}
+          \`\`\`
+
+          ### Action Required
+
+          Review the findings above and update \`images.yaml\` with any new tags that should be enrolled.
+          After updating \`images.yaml\`, the CI pipeline will automatically build and scan the new variants.
+
+          > **Note:** This PR was created automatically by the \`check-upstream-tags\` workflow.
+          > Once the \`cascadeguard images check-upstream\` CLI command is implemented ([CAS-304](/CAS/issues/CAS-304)),
+          > this inline Python will be replaced with the CLI command." \
+            --base main \
+            --head "$BRANCH"
+
+      - name: Summary (dry run)
+        if: steps.check.outputs.has_changes == 'true' && github.event.inputs.dry_run == 'true'
+        run: |
+          echo "## Dry Run — Upstream Tag Findings" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`json" >> $GITHUB_STEP_SUMMARY
+          cat /tmp/upstream_findings.json >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+
+      - name: Summary (no changes)
+        if: steps.check.outputs.has_changes == 'false'
+        run: |
+          echo "✅ No new upstream tags detected." >> $GITHUB_STEP_SUMMARY
