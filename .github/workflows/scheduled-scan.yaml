@@ -132,16 +132,17 @@ jobs:
           output-dir: images/${{ matrix.name }}/reports
 
       # ── Create/update per-CVE GitHub issues ─────────────────────
-      - name: Create or update CVE issues
-        if: steps.report.outputs.critical-count > 0 || steps.report.outputs.high-count > 0
-        uses: cascadeguard/cascadeguard-actions/scan-issues@5cec3323e5d6992f1b3a44516d75c09ceee10db8
-        with:
-          grype-results: grype-results.json
-          trivy-results: trivy-results.json
-          image: ${{ matrix.name }}
-          tag: ${{ matrix.tag }}
-          repo: ${{ github.repository }}
-          github-token: ${{ secrets.GITHUB_TOKEN }}
+      # Disabled pending CAS-81 merge — see CAS-205
+      # - name: Create or update CVE issues
+      #   if: steps.report.outputs.critical-count > 0 || steps.report.outputs.high-count > 0
+      #   uses: cascadeguard/cascadeguard-actions/scan-issues@5cec3323e5d6992f1b3a44516d75c09ceee10db8
+      #   with:
+      #     grype-results: grype-results.json
+      #     trivy-results: trivy-results.json
+      #     image: ${{ matrix.name }}
+      #     tag: ${{ matrix.tag }}
+      #     repo: ${{ github.repository }}
+      #     github-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Upload scan artifacts
         if: always()
