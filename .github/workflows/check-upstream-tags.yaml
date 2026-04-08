@@ -36,7 +36,7 @@ jobs:
           ref: main
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
         with:
           python-version: "3.12"
 
@@ -53,18 +53,24 @@ jobs:
           from datetime import date
 
           DOCKER_HUB_TAGS_URL = "https://hub.docker.com/v2/repositories/{namespace}/{image}/tags?page_size=100&ordering=last_updated"
-          GHCR_TAGS_URL = "https://ghcr.io/v2/{namespace}/{image}/tags/list"
+          # TODO(CAS-304): Add GHCR support once cascadeguard images check-upstream CLI ships
 
           def get_dockerhub_tags(namespace, image):
+              """Fetch all tags from Docker Hub, following pagination up to 10 pages."""
               url = DOCKER_HUB_TAGS_URL.format(namespace=namespace, image=image)
+              tags = []
+              page = 0
               try:
-                  r = requests.get(url, timeout=10)
-                  r.raise_for_status()
-                  results = r.json().get("results", [])
-                  return [t["name"] for t in results]
+                  while url and page < 10:
+                      r = requests.get(url, timeout=10)
+                      r.raise_for_status()
+                      data = r.json()
+                      tags.extend(t["name"] for t in data.get("results", []))
+                      url = data.get("next")
+                      page += 1
               except Exception as e:
                   print(f"  WARN: Could not fetch tags for {namespace}/{image}: {e}")
-                  return []
+              return tags
 
           def is_stable_tag(tag):
               """Filter out digest-only refs, rc/alpha/beta/dev suffixes, and 'latest'."""
