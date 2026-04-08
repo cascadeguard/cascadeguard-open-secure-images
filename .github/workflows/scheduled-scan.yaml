@@ -124,7 +124,7 @@ jobs:
       # ── Generate diffable report ────────────────────────────────
       - name: Generate vulnerability report
         id: report
-        uses: cascadeguard/cascadeguard-actions/scan-report@5cec3323e5d6992f1b3a44516d75c09ceee10db8
+        uses: cascadeguard/cascadeguard-actions/scan-report@3dd1c9a82b2b9d1a358931509e38aa5eac6f0aee # CAS-376
         with:
           grype-results: grype-results.json
           trivy-results: trivy-results.json
@@ -135,7 +135,7 @@ jobs:
       # Disabled pending CAS-81 merge — see CAS-205
       # - name: Create or update CVE issues
       #   if: steps.report.outputs.critical-count > 0 || steps.report.outputs.high-count > 0
-      #   uses: cascadeguard/cascadeguard-actions/scan-issues@5cec3323e5d6992f1b3a44516d75c09ceee10db8
+      #   uses: cascadeguard/cascadeguard-actions/scan-issues@3dd1c9a82b2b9d1a358931509e38aa5eac6f0aee # CAS-376
       #   with:
       #     grype-results: grype-results.json
       #     trivy-results: trivy-results.json
