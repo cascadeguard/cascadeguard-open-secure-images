@@ -52,8 +52,9 @@ jobs:
 
           filter_name = os.environ.get('IMAGE_FILTER', '').strip()
 
+          active = [img for img in images if img.get('enabled', True) is not False]
           include = []
-          for img in images:
+          for img in active:
               # Derive image_path from dockerfile path:
               # "images/python/3.12/Dockerfile" -> "python/3.12"
               parts = img['dockerfile'].split('/')
