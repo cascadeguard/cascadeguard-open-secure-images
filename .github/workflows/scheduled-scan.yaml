@@ -78,19 +78,24 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Pull published image
+        id: pull
         run: |
-          docker pull "${{ env.IMAGE_PREFIX }}/${{ matrix.name }}:${{ matrix.tag }}" || {
-            echo "::warning::Image ${{ matrix.name }}:${{ matrix.tag }} not found in registry. Skipping."
-            exit 0
-          }
+          if docker pull "${{ env.IMAGE_PREFIX }}/${{ matrix.name }}:${{ matrix.tag }}"; then
+            echo "image-available=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "::warning::Image ${{ matrix.name }}:${{ matrix.tag }} not found in registry. Skipping scan."
+            echo "image-available=false" >> "$GITHUB_OUTPUT"
+          fi
 
       # ── Grype Scan ──────────────────────────────────────────────
       - name: Install Grype
+        if: steps.pull.outputs.image-available == 'true'
         uses: cascadeguard/cascadeguard-actions/setup-grype@7e39ae312b916fb978e8b5f51aab113ae1aebca0 # CAS-94
         with:
           version: v0.110.0
 
       - name: Scan with Grype
+        if: steps.pull.outputs.image-available == 'true'
         id: grype
         run: |
           IMAGE="${{ env.IMAGE_PREFIX }}/${{ matrix.name }}:${{ matrix.tag }}"
@@ -105,7 +110,7 @@ jobs:
             --file grype-results.sarif || true
 
       - name: Upload Grype SARIF
-        if: always()
+        if: steps.pull.outputs.image-available == 'true'
         uses: github/codeql-action/upload-sarif@c10b8064de6f491fea524254123dbe5e09572f13 # v4
         with:
           sarif_file: grype-results.sarif
@@ -113,6 +118,7 @@ jobs:
 
       # ── Trivy Scan (secondary scanner) ──────────────────────────
       - name: Install Trivy
+        if: steps.pull.outputs.image-available == 'true'
         uses: aquasecurity/trivy-action@57a97c7e7821a5776cebc9bb87c984fa69cba8f1 # master
         with:
           image-ref: "${{ env.IMAGE_PREFIX }}/${{ matrix.name }}:${{ matrix.tag }}"
@@ -123,6 +129,7 @@ jobs:
 
       # ── Generate diffable report ────────────────────────────────
       - name: Generate vulnerability report
+        if: steps.pull.outputs.image-available == 'true'
         id: report
         uses: cascadeguard/cascadeguard-actions/scan-report@3dd1c9a82b2b9d1a358931509e38aa5eac6f0aee # CAS-376
         with:
@@ -145,7 +152,7 @@ jobs:
       #     github-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Upload scan artifacts
-        if: always()
+        if: steps.pull.outputs.image-available == 'true'
         uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7
         with:
           name: scan-results-${{ matrix.name }}
@@ -175,6 +182,7 @@ jobs:
           pattern: scan-results-*
           merge-multiple: false
           path: artifacts/
+        continue-on-error: true
 
       - name: Copy reports into repo tree
         run: |
