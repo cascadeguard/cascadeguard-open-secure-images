@@ -179,14 +179,15 @@ jobs:
       - name: Copy reports into repo tree
         run: |
           # Each artifact is in artifacts/scan-results-<name>/
-          # The grype-report.json and trivy-report.json are nested under the image dir
-          # We need to copy them back to their report directories
+          # The scan-report composite action writes vulnerability-report.json and
+          # vulnerability-report.md into images/<name>/reports/ inside each artifact.
+          # We need to copy them back to their report directories.
 
           shopt -s nullglob globstar
           copied=0
 
           for artifact_dir in artifacts/scan-results-*/; do
-            # Find report files (grype-report.json, trivy-report.json) inside nested dirs
+            # Find report files (vulnerability-report.json, vulnerability-report.md) inside nested dirs
             while IFS= read -r -d '' report_file; do
               # Reconstruct relative path from within artifact dir
               rel="${report_file#"$artifact_dir"}"
@@ -198,7 +199,7 @@ jobs:
                 echo "Copied: $dest"
                 ((copied++)) || true
               fi
-            done < <(find "$artifact_dir" -type f \( -name "grype-report.json" -o -name "trivy-report.json" \) -print0)
+            done < <(find "$artifact_dir" -type f \( -name "vulnerability-report.json" -o -name "vulnerability-report.md" \) -print0)
           done
 
           echo "Total report files staged: $copied"
