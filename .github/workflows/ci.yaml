@@ -29,6 +29,7 @@ permissions:
   packages: write
   id-token: write        # Required for cosign keyless signing via OIDC
   security-events: write # Required for SARIF upload
+  attestations: write    # Required for SLSA provenance attestation
 
 jobs:
   # ── Matrix Generation ────────────────────────────────────────────
