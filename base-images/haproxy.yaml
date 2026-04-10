@@ -1,0 +1,17 @@
+category: proxy
+cve_count_approx: low
+enabled: false
+latest_stable_tags:
+- '3.0'
+- '2.9'
+- 3.0-alpine
+local:
+  dir: images
+name: haproxy
+namespace: library
+pull_count: 1115254535
+registry: ghcr.io/cascadeguard
+star_count: 2012
+tier: registered
+tier_rationale: Proven load balancer used at scale. Lower community interest but high
+  operational relevance.

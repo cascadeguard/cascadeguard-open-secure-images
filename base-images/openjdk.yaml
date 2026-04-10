@@ -1,0 +1,19 @@
+category: runtime
+cve_count_approx: medium
+dockerfile: images/openjdk/21/Dockerfile
+image: openjdk
+latest_stable_tags:
+- 21-slim
+- 17-slim
+- 21-jre-slim
+local:
+  dir: images
+name: openjdk
+namespace: library
+pull_count: 2606336606
+registry: ghcr.io/cascadeguard
+star_count: 4115
+tag: 21-slim
+tier: free
+tier_rationale: Java runtime is mandatory for enterprise. openjdk:21 LTS is the current
+  long-term target.

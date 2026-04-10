@@ -1,0 +1,17 @@
+category: database
+cve_count_approx: medium-high
+enabled: false
+latest_stable_tags:
+- '7.0'
+- '6.0'
+- 7.0-jammy
+local:
+  dir: images
+name: mongo
+namespace: library
+pull_count: 4729405592
+registry: ghcr.io/cascadeguard
+star_count: 10714
+tier: registered
+tier_rationale: Popular NoSQL DB. High pull count but commercial licensing concerns
+  make registered-tier appropriate.

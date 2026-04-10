@@ -1,0 +1,17 @@
+category: database
+cve_count_approx: medium
+enabled: false
+latest_stable_tags:
+- '11.4'
+- '10.11'
+- 11.4-jammy
+local:
+  dir: images
+name: mariadb
+namespace: library
+pull_count: 3071304158
+registry: ghcr.io/cascadeguard
+star_count: 6088
+tier: registered
+tier_rationale: MySQL-compatible fork. Registered tier since mysql covers the primary
+  use case in free tier.

@@ -1,0 +1,17 @@
+category: search
+cve_count_approx: medium-high
+enabled: false
+latest_stable_tags:
+- 8.13.0
+- 7.17.0
+- 8.12.0
+local:
+  dir: images
+name: elasticsearch
+namespace: library
+pull_count: 947894350
+registry: ghcr.io/cascadeguard
+star_count: 6591
+tier: registered
+tier_rationale: Enterprise search/logging stack. Elastic licensing changes make registered
+  tier appropriate.

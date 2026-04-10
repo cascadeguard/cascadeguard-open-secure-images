@@ -1,0 +1,17 @@
+category: secret-management
+cve_count_approx: low
+enabled: false
+latest_stable_tags:
+- '1.18'
+- '1.17'
+- 1.18.1
+local:
+  dir: images
+name: consul
+namespace: hashicorp
+pull_count: 1053666241
+registry: ghcr.io/cascadeguard
+star_count: 1458
+tier: registered
+tier_rationale: HashiCorp service mesh/discovery. Registered tier due to lower pull
+  count vs vault and narrower audience.

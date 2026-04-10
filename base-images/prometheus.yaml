@@ -1,0 +1,17 @@
+category: observability
+cve_count_approx: low
+enabled: false
+latest_stable_tags:
+- v2.52.0
+- v2.51.0
+- v2.50.0
+local:
+  dir: images
+name: prometheus
+namespace: prom
+pull_count: 1951156569
+registry: ghcr.io/cascadeguard
+star_count: 2058
+tier: registered
+tier_rationale: Paired with grafana in the observability stack. Non-library namespace;
+  registered tier.

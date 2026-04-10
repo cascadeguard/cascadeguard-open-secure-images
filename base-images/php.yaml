@@ -1,0 +1,17 @@
+category: runtime
+cve_count_approx: high
+enabled: false
+latest_stable_tags:
+- 8.3-fpm-alpine
+- 8.2-fpm-alpine
+- 8.3-cli-alpine
+local:
+  dir: images
+name: php
+namespace: library
+pull_count: 1295174383
+registry: ghcr.io/cascadeguard
+star_count: 7837
+tier: registered
+tier_rationale: Massive legacy install base. CVE surface makes it a prime hardening
+  showcase for registered users.

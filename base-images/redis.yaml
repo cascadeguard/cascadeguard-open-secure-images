@@ -1,0 +1,19 @@
+category: cache
+cve_count_approx: low
+dockerfile: images/redis/7/Dockerfile
+image: redis
+latest_stable_tags:
+- '8.0'
+- '7.4'
+- 7.4-alpine
+local:
+  dir: images
+name: redis
+namespace: library
+pull_count: 10513467929
+registry: ghcr.io/cascadeguard
+star_count: 13552
+tag: 7.4-alpine
+tier: free
+tier_rationale: Ubiquitous cache layer. redis:alpine is already minimal; hardened
+  version adds value.

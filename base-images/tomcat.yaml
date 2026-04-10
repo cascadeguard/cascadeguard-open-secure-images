@@ -1,0 +1,17 @@
+category: web-server
+cve_count_approx: medium
+enabled: false
+latest_stable_tags:
+- '10.1'
+- '9.0'
+- 10.1-jre21
+local:
+  dir: images
+name: tomcat
+namespace: library
+pull_count: 810616505
+registry: ghcr.io/cascadeguard
+star_count: 3765
+tier: registered
+tier_rationale: Java servlet container; heavy in enterprise Java shops. Complements
+  openjdk in the free tier.

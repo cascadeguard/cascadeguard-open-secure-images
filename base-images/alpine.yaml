@@ -1,0 +1,19 @@
+category: base-os
+cve_count_approx: very-low
+dockerfile: images/alpine/Dockerfile
+image: alpine
+latest_stable_tags:
+- 3.23.3
+- '3.23'
+- '3.22'
+local:
+  dir: images
+name: alpine
+namespace: library
+pull_count: 11759412218
+registry: ghcr.io/cascadeguard
+star_count: 11488
+tag: '3.20'
+tier: free
+tier_rationale: Universal minimal base OS. Demonstrating alpine hardening is table-stakes
+  for the CascadeGuard brand.

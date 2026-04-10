@@ -1,0 +1,17 @@
+category: messaging
+cve_count_approx: medium
+enabled: false
+latest_stable_tags:
+- '4.0'
+- 4.0-alpine
+- 3.13-management
+local:
+  dir: images
+name: rabbitmq
+namespace: library
+pull_count: 3780068586
+registry: ghcr.io/cascadeguard
+star_count: 5352
+tier: registered
+tier_rationale: Dominant OSS message broker. Registered tier demonstrates queue infrastructure
+  hardening.

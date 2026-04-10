@@ -1,0 +1,19 @@
+category: runtime
+cve_count_approx: medium-high
+dockerfile: images/node/20/Dockerfile
+image: node
+latest_stable_tags:
+- 22-slim
+- 20-slim
+- 22-alpine
+local:
+  dir: images
+name: node
+namespace: library
+pull_count: 6330529712
+registry: ghcr.io/cascadeguard
+star_count: 14147
+tag: 20-slim
+tier: free
+tier_rationale: Default runtime for JS/TS backends. node:slim is widely used; hardened
+  distroless variant is compelling.
