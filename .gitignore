@@ -63,3 +63,6 @@ venv/
 node_modules/
 package-lock.json
 yarn.lock
+
+# ── Cascade guard ────────────────────────────────────────────────────
+.cascadeguard/.cache
