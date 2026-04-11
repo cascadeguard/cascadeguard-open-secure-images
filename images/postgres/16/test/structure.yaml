@@ -4,19 +4,30 @@ metadataTest:
   user: "postgres"
   workdir: "/var/lib/postgresql"
 
+# Use absolute paths for postgres binaries: they live in /usr/lib/postgresql/16/bin/
+# which is added to PATH via Docker ENV, but container-structure-test may not
+# inherit the image ENV when resolving command names. (CAS-472)
 commandTests:
   - name: "postgres binary is present"
-    command: "postgres"
+    command: "/usr/lib/postgresql/16/bin/postgres"
     args: ["--version"]
     expectedOutput: ["PostgreSQL 16"]
     exitCode: 0
 
   - name: "pg_isready is available"
-    command: "pg_isready"
+    command: "/usr/lib/postgresql/16/bin/pg_isready"
     args: ["--help"]
     exitCode: 0
 
 fileExistenceTests:
   - name: "/var/lib/postgresql exists"
     path: "/var/lib/postgresql"
+    shouldExist: true
+
+  - name: "postgres binary exists"
+    path: "/usr/lib/postgresql/16/bin/postgres"
+    shouldExist: true
+
+  - name: "pg_isready binary exists"
+    path: "/usr/lib/postgresql/16/bin/pg_isready"
     shouldExist: true
