@@ -140,7 +140,7 @@
   dockerfile: images/mysql/8/Dockerfile
   registry: ghcr.io/cascadeguard
   image: mysql
-  tag: "8.0"
+  tag: "8.4"
   namespace: library
   tier: free
   category: database

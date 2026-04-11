@@ -13,19 +13,13 @@ LABEL org.opencontainers.image.vendor="CascadeGuard"
 
 COPY shared/hardening/minimize-packages.sh /tmp/
 
+# minimize-packages.sh applies apt-get upgrade, removes unnecessary packages,
+# runs apt-get autoremove, and strips /usr/share/doc and /usr/share/man.
+# A second apt-get autoremove after minimize-packages.sh was found to
+# cascade-remove packages needed by the structure tests (CAS-472).
 RUN chmod +x /tmp/*.sh && \
     /tmp/minimize-packages.sh && \
     rm -rf /tmp/*.sh /var/lib/apt/lists/* /var/cache/apt/*
-
-# Remove packages not needed at runtime (postgres runs as the postgres user)
-RUN apt-get update && \
-    apt-get purge -y \
-      wget \
-      gnupg2 \
-    && apt-get autoremove -y \
-    && rm -rf /var/lib/apt/lists/* /var/cache/apt/* \
-    && find /usr/share/doc -maxdepth 1 -mindepth 1 -type d | xargs rm -rf \
-    && rm -rf /usr/share/man
 
 # NOTE: We do NOT run set-nonroot or strip-shells here because postgres:16 uses
 # the built-in 'postgres' user (UID 999) and the entrypoint requires bash.
