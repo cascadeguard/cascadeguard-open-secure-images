@@ -11,7 +11,8 @@ commandTests:
   - name: "postgres binary is present"
     command: "/usr/lib/postgresql/16/bin/postgres"
     args: ["--version"]
-    expectedOutput: ["PostgreSQL 16"]
+    # postgres --version outputs: "postgres (PostgreSQL) 16.x (Debian ...)"
+    expectedOutput: ["(PostgreSQL) 16"]
     exitCode: 0
 
   - name: "pg_isready is available"
