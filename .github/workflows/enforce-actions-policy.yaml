@@ -33,9 +33,9 @@ on:
         default: ".github/workflows"
         type: string
       cascadeguard_version:
-        description: "cascadeguard PyPI version to install (e.g. '1.2.3' or 'latest')"
+        description: "cascadeguard CLI git ref to install (e.g. 'main' or a tag)"
         required: false
-        default: "latest"
+        default: "main"
         type: string
 
 jobs:
@@ -56,11 +56,8 @@ jobs:
 
       - name: Install CascadeGuard
         run: |
-          if [ "${{ inputs.cascadeguard_version }}" = "latest" ]; then
-            pip install --quiet cascadeguard
-          else
-            pip install --quiet "cascadeguard==${{ inputs.cascadeguard_version }}"
-          fi
+          pip install --quiet \
+            "git+https://github.com/cascadeguard/cascadeguard.git@${{ inputs.cascadeguard_version }}#subdirectory=app"
 
       - name: Audit GitHub Actions policy
         run: |

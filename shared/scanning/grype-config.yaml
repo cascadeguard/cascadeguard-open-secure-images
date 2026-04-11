@@ -146,14 +146,12 @@ ignore:
     package:
       name: "stdlib"
       type: "go-module"
-      location: "/usr/local/go/**"
     reason: "Go 1.22 toolchain build tools, not TLS servers. Fix requires upgrade to golang:1.24-alpine. Ref: CAS-472"
 
   - vulnerability: "CVE-2025-22871"
     package:
       name: "stdlib"
       type: "go-module"
-      location: "/usr/local/go/**"
     reason: "Go 1.22 toolchain build tools, no HTTP server surface. Fix requires upgrade to golang:1.24-alpine. Ref: CAS-472"
 
   # ── mysql:8.4 — upstream dependency exceptions (CAS-472) ────────────────────
