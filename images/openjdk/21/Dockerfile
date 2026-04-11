@@ -1,7 +1,12 @@
 # CascadeGuard Hardened OpenJDK 21 Slim Image
 # https://github.com/cascadeguard/open-secure-images
+#
+# Migrated from deprecated docker.io/library/openjdk:21-slim to Eclipse Temurin.
+# The openjdk Docker Hub repository is EOL/unmaintained; Eclipse Temurin is the
+# actively maintained successor published by the Eclipse Adoptium project.
+# See: https://hub.docker.com/_/openjdk (deprecation notice)
 
-FROM openjdk:21-slim
+FROM eclipse-temurin:21-jre-jammy
 
 LABEL maintainer="CascadeGuard <security@cascadeguard.dev>"
 LABEL org.opencontainers.image.title="cascadeguard/openjdk"
@@ -31,10 +36,11 @@ RUN apt-get update && \
     && find /usr/share/doc -maxdepth 1 -mindepth 1 -type d | xargs rm -rf \
     && rm -rf /usr/share/man
 
-# Remove JDK tools not needed in a runtime-only image
-# Keep java but strip javac, jshell, jar, jpackage, jlink from JDK if present
+# Remove JDK tools not needed in a runtime-only image.
+# eclipse-temurin:21-jre-jammy is already a JRE image (no javac/jlink), but run
+# defensively in case the base ever includes them. Temurin installs under /opt/java.
 RUN for tool in javac jshell jar jlink jpackage; do \
-      rm -f /usr/local/openjdk-21/bin/$tool 2>/dev/null || true; \
+      rm -f /opt/java/openjdk/bin/$tool 2>/dev/null || true; \
     done
 
 USER nonroot

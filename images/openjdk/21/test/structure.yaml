@@ -8,7 +8,8 @@ commandTests:
   - name: "Java 21 is installed and accessible"
     command: "java"
     args: ["-version"]
-    expectedOutput: ["openjdk version \"21"]
+    # java -version writes to stderr, not stdout
+    expectedError: ["openjdk version \"21"]
     exitCode: 0
 
   - name: "nonroot user exists with UID 65532"
