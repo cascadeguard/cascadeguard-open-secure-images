@@ -40,48 +40,10 @@ jobs:
 
       - name: Resolve image from images.yaml
         id: resolve
-        run: |
-          python3 - <<'PYEOF'
-          import yaml, json, os, sys
-
-          image_name = os.environ["INPUT_IMAGE_NAME"]
-          image_tag  = os.environ["INPUT_IMAGE_TAG"]
-
-          with open("images.yaml") as f:
-              images = yaml.safe_load(f)
-
-          match = None
-          for img in images:
-              if not img.get("enabled", True):
-                  continue
-              if img.get("image") == image_name:
-                  match = img
-                  break
-
-          if not match:
-              print(f"::error::Image '{image_name}' not found in images.yaml or is disabled.")
-              with open(os.environ["GITHUB_OUTPUT"], "a") as f:
-                  f.write("found=false\n")
-              sys.exit(0)
-
-          # Derive image_path from dockerfile:
-          # "images/python/3.12/Dockerfile" -> "python/3.12"
-          parts = match["dockerfile"].split("/")
-          image_path = "/".join(parts[1:-1])
-
-          tag = image_tag if image_tag else match["tag"]
-
-          print(f"Resolved: {image_name}:{tag} at images/{image_path}")
-
-          with open(os.environ["GITHUB_OUTPUT"], "a") as f:
-              f.write(f"image_path={image_path}\n")
-              f.write(f"image_name={image_name}\n")
-              f.write(f"image_tag={tag}\n")
-              f.write("found=true\n")
-          PYEOF
-        env:
-          INPUT_IMAGE_NAME: ${{ github.event.client_payload.image_name }}
-          INPUT_IMAGE_TAG: ${{ github.event.client_payload.image_tag }}
+        uses: cascadeguard/cascadeguard-actions/resolve-image@main
+        with:
+          image-name: ${{ github.event.client_payload.image_name }}
+          image-tag: ${{ github.event.client_payload.image_tag }}
 
       - name: Log rebuild context
         run: |
