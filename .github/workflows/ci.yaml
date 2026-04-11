@@ -56,6 +56,8 @@ jobs:
           active = [img for img in images if img.get('enabled', True) is not False]
           include = []
           for img in active:
+              if 'dockerfile' not in img:
+                  continue
               # Derive image_path from dockerfile path:
               # "images/python/3.12/Dockerfile" -> "python/3.12"
               parts = img['dockerfile'].split('/')
