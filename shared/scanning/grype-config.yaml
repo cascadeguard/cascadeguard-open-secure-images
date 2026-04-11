@@ -137,9 +137,10 @@ ignore:
   #   - CVE-2025-22871: net/http bare LF as chunk-size line terminator.
   #     Fixed in Go 1.23.8+ / 1.24.2+.  Toolchain binaries do not serve HTTP.
   #
-  # Each CVE creates one match per toolchain binary (~20 binaries), causing
-  # Grype to report 40 Critical findings.  Exceptions are scoped to
-  # /usr/local/go/ (the Go toolchain installation prefix).
+  # Each CVE creates matches per toolchain binary (~20 binaries) and also
+  # one match for the top-level "go" package (the toolchain metadata entry).
+  # Grype reports two distinct package names: "stdlib" (per binary) and "go"
+  # (the parent toolchain entry).  Both entries must be suppressed.
   # Fix: upgrade to golang:1.24-alpine (tracked as follow-up in CAS-473).
   # Ref: CAS-472.
   - vulnerability: "CVE-2025-68121"
@@ -148,11 +149,23 @@ ignore:
       type: "go-module"
     reason: "Go 1.22 toolchain build tools, not TLS servers. Fix requires upgrade to golang:1.24-alpine. Ref: CAS-472"
 
+  - vulnerability: "CVE-2025-68121"
+    package:
+      name: "go"
+      type: "go-module"
+    reason: "Go 1.22 toolchain metadata entry, not a TLS server. Fix requires upgrade to golang:1.24-alpine. Ref: CAS-472"
+
   - vulnerability: "CVE-2025-22871"
     package:
       name: "stdlib"
       type: "go-module"
     reason: "Go 1.22 toolchain build tools, no HTTP server surface. Fix requires upgrade to golang:1.24-alpine. Ref: CAS-472"
+
+  - vulnerability: "CVE-2025-22871"
+    package:
+      name: "go"
+      type: "go-module"
+    reason: "Go 1.22 toolchain metadata entry, no HTTP server surface. Fix requires upgrade to golang:1.24-alpine. Ref: CAS-472"
 
   # ── mysql:8.4 — upstream dependency exceptions (CAS-472) ────────────────────
   #
