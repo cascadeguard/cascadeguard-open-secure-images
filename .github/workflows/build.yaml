@@ -1,0 +1,30 @@
+# CascadeGuard — Build Workflow (Thin Wrapper)
+#
+# Delegates the full build pipeline to the reusable workflow in
+# cascadeguard-actions. This file only provides trigger config.
+
+name: Build
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "images/**"
+      - "shared/**"
+      - "images.yaml"
+      - ".github/workflows/**"
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      image_filter:
+        description: "Limit to a specific image name. Leave empty for all."
+        required: false
+        default: ""
+
+jobs:
+  build:
+    uses: cascadeguard/cascadeguard-actions/.github/workflows/build.yaml@main
+    with:
+      image_filter: ${{ github.event.inputs.image_filter || '' }}
+    secrets: inherit
