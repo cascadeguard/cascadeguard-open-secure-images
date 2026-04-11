@@ -152,8 +152,8 @@ ignore:
   - vulnerability: "CVE-2025-68121"
     package:
       name: "go"
-      type: "go-module"
-    reason: "Go 1.22 toolchain metadata entry, not a TLS server. Fix requires upgrade to golang:1.24-alpine. Ref: CAS-472"
+      type: "binary"
+    reason: "Go 1.22 toolchain binary (/usr/local/go/bin/go), not a TLS server. Fix requires upgrade to golang:1.24-alpine. Ref: CAS-472"
 
   - vulnerability: "CVE-2025-22871"
     package:
@@ -164,8 +164,8 @@ ignore:
   - vulnerability: "CVE-2025-22871"
     package:
       name: "go"
-      type: "go-module"
-    reason: "Go 1.22 toolchain metadata entry, no HTTP server surface. Fix requires upgrade to golang:1.24-alpine. Ref: CAS-472"
+      type: "binary"
+    reason: "Go 1.22 toolchain binary (/usr/local/go/bin/go), no HTTP server surface. Fix requires upgrade to golang:1.24-alpine. Ref: CAS-472"
 
   # ── mysql:8.4 — upstream dependency exceptions (CAS-472) ────────────────────
   #
