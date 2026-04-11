@@ -12,7 +12,8 @@ commandTests:
     command: "/usr/lib/postgresql/16/bin/postgres"
     args: ["--version"]
     # postgres --version outputs: "postgres (PostgreSQL) 16.x (Debian ...)"
-    expectedOutput: ["(PostgreSQL) 16"]
+    # Parens are regex metacharacters — match via PostgreSQL.*16\. instead.
+    expectedOutput: ["PostgreSQL.*16\\."]
     exitCode: 0
 
   - name: "pg_isready is available"
