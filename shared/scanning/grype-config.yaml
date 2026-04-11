@@ -46,6 +46,87 @@ ignore:
   # Disputed CVEs with no known exploit path in our configuration
   # Add entries here as they are reviewed and approved by the security team
 
+  # ── redis:7.4-alpine — Go stdlib CVEs in gosu (CAS-472/CAS-473) ─────────────
+  #
+  # redis:7.4-alpine bundles gosu compiled with Go stdlib go1.18.2 (Alpine
+  # rebuilds pending Go 1.24+).  8 Critical CVEs are in this old Go stdlib;
+  # none are exploitable via gosu's privilege-drop-only role.  gosu does not
+  # serve HTTP, render templates, run cgo at runtime, or exec `go env`.
+  # Exceptions are scoped to stdlib go1.18.2 to avoid suppressing newer CVEs.
+  #
+  # gosu also appears in postgres:16 (same CVEs, same version).
+  # CAS-473 (PR#62) tracks the long-term fix (Alpine rebuild with Go 1.24+).
+  # Ref: CAS-472, CAS-473.
+
+  # CVE-2023-24531: `go env` does not sanitize environment output.
+  # gosu never calls `go env`; not exploitable.
+  - vulnerability: "CVE-2023-24531"
+    package:
+      name: "stdlib"
+      version: "go1.18.2"
+      type: "go-module"
+    reason: "go env only; gosu does not call go env at runtime. Waiting on Alpine redis rebuild with Go 1.24+. Ref: CAS-472"
+
+  # CVE-2023-24538: html/template backtick handling.
+  # Redis does not render HTML templates.
+  - vulnerability: "CVE-2023-24538"
+    package:
+      name: "stdlib"
+      version: "go1.18.2"
+      type: "go-module"
+    reason: "html/template backtick; Redis does not render templates. Waiting on Alpine redis rebuild with Go 1.24+. Ref: CAS-472"
+
+  # CVE-2023-24540: html/template JS whitespace handling.
+  # Redis does not render HTML templates.
+  - vulnerability: "CVE-2023-24540"
+    package:
+      name: "stdlib"
+      version: "go1.18.2"
+      type: "go-module"
+    reason: "html/template JS whitespace; Redis does not render templates. Waiting on Alpine redis rebuild with Go 1.24+. Ref: CAS-472"
+
+  # CVE-2023-29402 / CVE-2023-29404 / CVE-2023-29405: cgo code-gen attacks
+  # (arbitrary code at build time via `go get`).  gosu is pre-compiled; no
+  # cgo build step executes in the running container.
+  - vulnerability: "CVE-2023-29402"
+    package:
+      name: "stdlib"
+      version: "go1.18.2"
+      type: "go-module"
+    reason: "cgo build-time attack; gosu is pre-compiled, no go build runs in container. Ref: CAS-472"
+
+  - vulnerability: "CVE-2023-29404"
+    package:
+      name: "stdlib"
+      version: "go1.18.2"
+      type: "go-module"
+    reason: "cgo build-time attack; gosu is pre-compiled, no go build runs in container. Ref: CAS-472"
+
+  - vulnerability: "CVE-2023-29405"
+    package:
+      name: "stdlib"
+      version: "go1.18.2"
+      type: "go-module"
+    reason: "cgo build-time attack; gosu is pre-compiled, no go build runs in container. Ref: CAS-472"
+
+  # CVE-2024-24790: net/netip IPv4-mapped address behaviour.
+  # Redis manages networking at the protocol level; stdlib path not reachable.
+  - vulnerability: "CVE-2024-24790"
+    package:
+      name: "stdlib"
+      version: "go1.18.2"
+      type: "go-module"
+    reason: "net/netip IPv4-mapped behaviour; not reachable via Redis command surface. Waiting on Alpine redis rebuild with Go 1.24+. Ref: CAS-472"
+
+  # CVE-2025-22871: net/http bare LF as chunk-size line terminator.
+  # gosu does not expose an HTTP server.
+  - vulnerability: "CVE-2025-22871"
+    package:
+      name: "stdlib"
+      version: "go1.18.2"
+      type: "go-module"
+    reason: "net/http LF handling; gosu exposes no HTTP surface. Waiting on Alpine redis rebuild with Go 1.24+. Ref: CAS-472"
+
   # ── mysql:8.4 — upstream dependency exceptions (CAS-472) ────────────────────
   #
   # CVE-2025-68121: crypto/tls incorrect certificate validation during TLS
