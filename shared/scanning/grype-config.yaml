@@ -46,6 +46,65 @@ ignore:
   # Disputed CVEs with no known exploit path in our configuration
   # Add entries here as they are reviewed and approved by the security team
 
+  # ── redis:7.4-alpine — Go stdlib CVEs in Alpine-compiled Redis binary ────────
+  # Redis upstream (redis:7.4-alpine) is compiled against Go 1.18.2 by Alpine.
+  # The CVEs below are in the embedded Go stdlib; apk upgrade cannot patch them
+  # because they require Alpine to rebuild Redis with Go 1.24+.
+  # Exploitability assessment:
+  #   - CVE-2023-24538 / CVE-2023-24540: html/template backtick / JS whitespace
+  #     handling. Redis does not render HTML templates. Not exploitable in this
+  #     image context.
+  #   - CVE-2024-24790: net/netip IPv4-mapped address behaviour. Redis manages
+  #     its own networking at the protocol level; this stdlib path is not reachable
+  #     via any Redis command surface.
+  #   - CVE-2025-68121: crypto/tls session resumption cert validation. Our default
+  #     redis.conf does not enable TLS; the attack surface is limited to
+  #     explicitly TLS-configured Redis deployments.
+  # Status: waiting-upstream (Alpine rebuild with Go 1.24+). Ref: CAS-473
+
+  - vulnerability: "CVE-2023-24538"
+    package:
+      name: "stdlib"
+      version: "v1.18.2"
+      type: "go-module"
+    reason: "html/template backtick handling; Redis does not render templates. Waiting on Alpine redis rebuild with Go 1.24+. Ref: CAS-473"
+
+  - vulnerability: "CVE-2023-24540"
+    package:
+      name: "stdlib"
+      version: "v1.18.2"
+      type: "go-module"
+    reason: "html/template JS whitespace handling; Redis does not render templates. Waiting on Alpine redis rebuild with Go 1.24+. Ref: CAS-473"
+
+  - vulnerability: "CVE-2024-24790"
+    package:
+      name: "stdlib"
+      version: "v1.18.2"
+      type: "go-module"
+    reason: "net/netip IPv4-mapped behaviour; not reachable via Redis command surface. Waiting on Alpine redis rebuild with Go 1.24+. Ref: CAS-473"
+
+  - vulnerability: "CVE-2025-68121"
+    package:
+      name: "stdlib"
+      version: "v1.18.2"
+      type: "go-module"
+    reason: "crypto/tls session resumption; default redis.conf has TLS disabled. Waiting on Alpine redis rebuild with Go 1.24+. Ref: CAS-473"
+
+  # ── golang:1.22-alpine — Go stdlib CVE in official Go toolchain image ────────
+  # CVE-2025-68121 is fixed in Go 1.24.13+ only; no backport to the 1.22 branch.
+  # golang:1.22-alpine is intentionally a Go 1.22 build image; upgrading to
+  # golang:1.24-alpine is a separate tracked decision (see CAS-473 follow-up).
+  # The image is a CI build tool, not a runtime service, so TLS session resumption
+  # attack paths require an active TLS client in user build scripts.
+  # Status: fix available in golang:1.24-alpine; upgrade path tracked. Ref: CAS-473
+
+  - vulnerability: "CVE-2025-68121"
+    package:
+      name: "stdlib"
+      version: "v1.22.12"
+      type: "go-module"
+    reason: "crypto/tls session resumption; fixed in Go 1.24+. golang:1.22 image intentionally pins 1.22; upgrade to 1.24 tracked separately. Ref: CAS-473"
+
 # External sources for enriched vulnerability data
 external-sources:
   enable: true
