@@ -46,6 +46,34 @@ ignore:
   # Disputed CVEs with no known exploit path in our configuration
   # Add entries here as they are reviewed and approved by the security team
 
+  # ── mysql:8.4 — upstream dependency exceptions (CAS-472) ────────────────────
+  #
+  # CVE-2025-68121: crypto/tls incorrect certificate validation during TLS
+  # session resumption in Go stdlib go1.24.6.  Affects the `gosu` binary
+  # bundled by the upstream mysql:8.4 image to drop privileges at startup.
+  # gosu does not perform TLS connections in production; this is a privilege-
+  # dropping shim only.  Fix requires upstream mysql to ship a new gosu compiled
+  # with Go ≥ 1.24.13.  Accepted risk pending upstream update.  Ref: CAS-472.
+  - vulnerability: "CVE-2025-68121"
+    package:
+      name: "stdlib"
+      type: "go-module"
+      location: "/usr/local/bin/gosu"
+    reason: "gosu privilege-drop shim; no production TLS usage. Fix requires upstream image update. Ref: CAS-472"
+
+  # CVE-2026-27459: PyOpenSSL 25.1.0 critical vulnerability in the MySQL Shell
+  # (mysqlsh) Python environment bundled by upstream mysql:8.4.  mysqlsh is an
+  # administrative/DBA CLI tool, not a production service exposed in container
+  # workloads.  Fix version (pyopenssl ≥ 26.0.0) requires modifying the upstream
+  # mysqlsh package.  Accepted risk pending upstream mysql:8.4 image update.
+  # Ref: CAS-472.
+  # pyopenssl is only present in the mysql:8.4 image via the mysqlsh package.
+  - vulnerability: "CVE-2026-27459"
+    package:
+      name: "pyopenssl"
+      type: "python"
+    reason: "mysqlsh admin tool, not exposed in production service. Fix requires upstream mysql:8.4 update. Ref: CAS-472"
+
 # External sources for enriched vulnerability data
 external-sources:
   enable: true
