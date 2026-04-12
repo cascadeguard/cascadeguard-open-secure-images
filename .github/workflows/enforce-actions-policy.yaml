@@ -1,21 +1,6 @@
-# CascadeGuard — Reusable GitHub Actions Policy Enforcement Workflow
+# CascadeGuard — Enforce Actions Policy (Thin Wrapper)
 #
-# Audits all workflow files in .github/workflows/ against an
-# .cascadeguard/actions-policy.yaml policy file using the
-# `cascadeguard actions audit` CLI command.
-#
-# Usage in a caller workflow:
-#
-#   jobs:
-#     policy:
-#       uses: cascadeguard/cascadeguard-open-secure-images/.github/workflows/enforce-actions-policy.yaml@main
-#       with:
-#         policy_path: .cascadeguard/actions-policy.yaml   # optional
-#         workflows_dir: .github/workflows                  # optional
-#         cascadeguard_version: latest                      # optional
-#
-# The job fails (non-zero exit) if any workflow uses an action that violates
-# the policy. Violation details are printed to the job log.
+# Delegates to the reusable workflow in cascadeguard-actions.
 
 name: Enforce Actions Policy
 
@@ -40,27 +25,8 @@ on:
 
 jobs:
   audit:
-    name: Audit Actions Policy
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
-
-      - name: Set up Python
-        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
-        with:
-          python-version: "3.12"
-
-      - name: Install CascadeGuard
-        run: |
-          pip install --quiet \
-            "git+https://github.com/cascadeguard/cascadeguard.git@${{ inputs.cascadeguard_version }}#subdirectory=app"
-
-      - name: Audit GitHub Actions policy
-        run: |
-          cascadeguard actions audit \
-            --policy "${{ inputs.policy_path }}" \
-            --workflows-dir "${{ inputs.workflows_dir }}"
+    uses: cascadeguard/cascadeguard-actions/.github/workflows/enforce-actions-policy.yaml@main
+    with:
+      policy_path: ${{ inputs.policy_path }}
+      workflows_dir: ${{ inputs.workflows_dir }}
+      cascadeguard_version: ${{ inputs.cascadeguard_version }}
