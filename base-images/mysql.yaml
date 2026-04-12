@@ -1,0 +1,19 @@
+category: database
+cve_count_approx: medium
+dockerfile: images/mysql/8/Dockerfile
+image: mysql
+latest_stable_tags:
+- '9.0'
+- '8.4'
+- '8.0'
+local:
+  dir: images
+name: mysql
+namespace: library
+pull_count: 4906941834
+registry: ghcr.io/cascadeguard
+star_count: 16104
+tag: '8.0'
+tier: free
+tier_rationale: Most recognised database brand. Hardened mysql image addresses a real
+  enterprise gap.

@@ -1,0 +1,18 @@
+category: database
+cve_count_approx: medium
+dockerfile: images/postgres/16/Dockerfile
+image: postgres
+latest_stable_tags:
+- '16'
+- '15'
+- '14'
+local:
+  dir: images
+name: postgres
+namespace: library
+pull_count: 10454907507
+registry: ghcr.io/cascadeguard
+star_count: 14863
+tag: '16'
+tier: free
+tier_rationale: 2nd most pulled database. Default DB for most cloud-native stacks.

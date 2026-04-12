@@ -1,0 +1,17 @@
+category: runtime
+cve_count_approx: medium
+enabled: false
+latest_stable_tags:
+- 3.3-slim
+- 3.2-alpine
+- 3.3-alpine
+local:
+  dir: images
+name: ruby
+namespace: library
+pull_count: 1536810340
+registry: ghcr.io/cascadeguard
+star_count: 2403
+tier: registered
+tier_rationale: Rails ecosystem still significant. Complements the runtime catalog
+  alongside python and node.

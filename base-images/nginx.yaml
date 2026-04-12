@@ -1,0 +1,19 @@
+category: web-server
+cve_count_approx: low
+dockerfile: images/nginx/Dockerfile
+image: nginx
+latest_stable_tags:
+- '1.28'
+- 1.28-alpine
+- stable-alpine
+local:
+  dir: images
+name: nginx
+namespace: library
+pull_count: 12905229320
+registry: ghcr.io/cascadeguard
+star_count: 21238
+tag: stable-alpine-slim
+tier: free
+tier_rationale: '#1 most pulled image on Docker Hub. Every web developer knows nginx.
+  Highest visibility for CascadeGuard.'

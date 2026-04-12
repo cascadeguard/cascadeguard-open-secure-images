@@ -1,0 +1,17 @@
+category: observability
+cve_count_approx: medium
+enabled: false
+latest_stable_tags:
+- 11.0.0
+- 10.4.0
+- 10.3.0
+local:
+  dir: images
+name: grafana
+namespace: grafana
+pull_count: 5179763759
+registry: ghcr.io/cascadeguard
+star_count: 3526
+tier: registered
+tier_rationale: Standard observability dashboard. Non-library namespace; registered
+  tier appropriate.

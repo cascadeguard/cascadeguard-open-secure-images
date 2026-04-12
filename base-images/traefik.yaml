@@ -1,0 +1,17 @@
+category: proxy
+cve_count_approx: low
+enabled: false
+latest_stable_tags:
+- v3.2
+- v2.11
+- v3.2-alpine
+local:
+  dir: images
+name: traefik
+namespace: library
+pull_count: 3471658305
+registry: ghcr.io/cascadeguard
+star_count: 3610
+tier: registered
+tier_rationale: Modern cloud-native reverse proxy/ingress. Growing fast; hardened
+  traefik is compelling for k8s users.

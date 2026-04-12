@@ -1,0 +1,7 @@
+defaults:
+  registry: ghcr.io/cascadeguard
+  local:
+    dir: images
+
+ci:
+  platform: github

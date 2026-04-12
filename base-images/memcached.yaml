@@ -1,0 +1,16 @@
+category: cache
+cve_count_approx: low
+enabled: false
+latest_stable_tags:
+- '1.6'
+- 1.6-alpine
+local:
+  dir: images
+name: memcached
+namespace: library
+pull_count: 13093270037
+registry: ghcr.io/cascadeguard
+star_count: 2439
+tier: registered
+tier_rationale: Highest pull count of any registered-tier image but low star count
+  signals automated pulls over developer community interest.

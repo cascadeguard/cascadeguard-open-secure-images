@@ -1,0 +1,19 @@
+category: runtime
+cve_count_approx: low
+dockerfile: images/golang/1.22/Dockerfile
+image: golang
+latest_stable_tags:
+- 1.22-alpine
+- 1.22-bookworm
+- 1.21-alpine
+local:
+  dir: images
+name: golang
+namespace: library
+pull_count: 2506545375
+registry: ghcr.io/cascadeguard
+star_count: 5111
+tag: 1.22-alpine
+tier: free
+tier_rationale: Growing fast. golang:alpine is the standard CI build image for Go
+  projects.

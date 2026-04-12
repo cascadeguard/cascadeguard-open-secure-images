@@ -1,0 +1,17 @@
+category: secret-management
+cve_count_approx: low
+enabled: false
+latest_stable_tags:
+- '1.16'
+- '1.15'
+- 1.16.1
+local:
+  dir: images
+name: vault
+namespace: hashicorp
+pull_count: 551660962
+registry: ghcr.io/cascadeguard
+star_count: 1176
+tier: registered
+tier_rationale: HashiCorp secrets manager. Lower absolute pulls but high enterprise
+  value. BSL license shift reduces free-tier appeal.

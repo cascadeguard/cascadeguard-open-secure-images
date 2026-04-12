@@ -1,0 +1,16 @@
+category: web-server
+cve_count_approx: medium
+enabled: false
+latest_stable_tags:
+- '2.4'
+- 2.4-alpine
+local:
+  dir: images
+name: httpd
+namespace: library
+pull_count: 4694928712
+registry: ghcr.io/cascadeguard
+star_count: 4927
+tier: registered
+tier_rationale: "Apache httpd \u2014 legacy but still widely deployed. Good comparison\
+  \ target alongside nginx."
