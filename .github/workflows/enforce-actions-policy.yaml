@@ -18,9 +18,9 @@ on:
         default: ".github/workflows"
         type: string
       cascadeguard_version:
-        description: "cascadeguard PyPI version to install"
+        description: "cascadeguard CLI git ref to install (e.g. 'main' or a tag)"
         required: false
-        default: "latest"
+        default: "main"
         type: string
 
 jobs:

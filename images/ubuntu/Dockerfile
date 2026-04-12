@@ -12,13 +12,15 @@ LABEL org.opencontainers.image.licenses="Apache-2.0"
 LABEL org.opencontainers.image.vendor="CascadeGuard"
 
 COPY shared/hardening/minimize-packages.sh /tmp/
-COPY shared/hardening/strip-shells.sh /tmp/
 COPY shared/hardening/set-nonroot.sh /tmp/
 
+# NOTE: strip-shells.sh is intentionally NOT run here. On Ubuntu 22.04,
+# /bin/sh → /bin/dash, so strip-shells would remove /bin/bash while keeping
+# dash. The ubuntu base image is designed as a general-purpose base and the
+# structure test explicitly verifies bash is present. Docker CMD also uses bash.
 RUN chmod +x /tmp/*.sh && \
     /tmp/minimize-packages.sh && \
     /tmp/set-nonroot.sh && \
-    /tmp/strip-shells.sh && \
     rm -rf /tmp/*.sh /var/lib/apt/lists/* /var/cache/apt/*
 
 # Remove packages not needed at runtime

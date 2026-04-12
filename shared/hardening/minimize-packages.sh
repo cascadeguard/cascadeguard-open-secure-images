@@ -93,6 +93,13 @@ fi
 
 # ── Alpine ───────────────────────────────────────────────────────────
 if is_alpine; then
+  # Apply all available security patches before removing packages.
+  # Alpine base images do not run apk upgrade, so unpatched CVEs accumulate
+  # between upstream tag bumps. This mirrors the Debian apt-get upgrade above.
+  echo "  Applying Alpine security patches (apk upgrade)..."
+  apk update && apk upgrade --no-cache
+  rm -rf /var/cache/apk/*
+
   ALPINE_PACKAGES_TO_REMOVE=(
     wget
     curl
