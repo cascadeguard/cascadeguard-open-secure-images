@@ -18,7 +18,8 @@
 # ── Managed (10) ──────────────────────────────────────────────────────────────
 
 - name: nginx
-  dockerfile: images/nginx/Dockerfile
+  source:
+    dockerfile: images/nginx/Dockerfile
   registry: ghcr.io/cascadeguard
   image: nginx
   tag: stable-alpine-slim
@@ -35,7 +36,8 @@
   tier_rationale: "#1 most pulled image on Docker Hub. Every web developer knows nginx. Highest visibility for CascadeGuard."
 
 - name: alpine
-  dockerfile: images/alpine/Dockerfile
+  source:
+    dockerfile: images/alpine/Dockerfile
   registry: ghcr.io/cascadeguard
   image: alpine
   tag: "3.20"
@@ -52,7 +54,8 @@
   tier_rationale: "Universal minimal base OS. Demonstrating alpine hardening is table-stakes for the CascadeGuard brand."
 
 - name: ubuntu
-  dockerfile: images/ubuntu/Dockerfile
+  source:
+    dockerfile: images/ubuntu/Dockerfile
   registry: ghcr.io/cascadeguard
   image: ubuntu
   tag: "22.04"
@@ -69,7 +72,8 @@
   tier_rationale: "Most widely used Linux distro. ubuntu:22.04 LTS is the enterprise standard base image."
 
 - name: python
-  dockerfile: images/python/3.12/Dockerfile
+  source:
+    dockerfile: images/python/3.12/Dockerfile
   registry: ghcr.io/cascadeguard
   image: python
   tag: 3.12-slim
@@ -86,7 +90,8 @@
   tier_rationale: "3rd most pulled. Python is the dominant ML/AI runtime — huge audience for a hardened Python image."
 
 - name: postgres
-  dockerfile: images/postgres/16/Dockerfile
+  source:
+    dockerfile: images/postgres/16/Dockerfile
   registry: ghcr.io/cascadeguard
   image: postgres
   tag: "16"
@@ -103,7 +108,8 @@
   tier_rationale: "2nd most pulled database. Default DB for most cloud-native stacks."
 
 - name: redis
-  dockerfile: images/redis/7/Dockerfile
+  source:
+    dockerfile: images/redis/7/Dockerfile
   registry: ghcr.io/cascadeguard
   image: redis
   tag: 7.4-alpine
@@ -120,7 +126,8 @@
   tier_rationale: "Ubiquitous cache layer. redis:alpine is already minimal; hardened version adds value."
 
 - name: node
-  dockerfile: images/node/20/Dockerfile
+  source:
+    dockerfile: images/node/20/Dockerfile
   registry: ghcr.io/cascadeguard
   image: node
   tag: 20-slim
@@ -137,7 +144,8 @@
   tier_rationale: "Default runtime for JS/TS backends. node:slim is widely used; hardened distroless variant is compelling."
 
 - name: mysql
-  dockerfile: images/mysql/8/Dockerfile
+  source:
+    dockerfile: images/mysql/8/Dockerfile
   registry: ghcr.io/cascadeguard
   image: mysql
   tag: "8.0"
@@ -154,7 +162,8 @@
   tier_rationale: "Most recognised database brand. Hardened mysql image addresses a real enterprise gap."
 
 - name: golang
-  dockerfile: images/golang/1.22/Dockerfile
+  source:
+    dockerfile: images/golang/1.22/Dockerfile
   registry: ghcr.io/cascadeguard
   image: golang
   tag: 1.22-alpine
@@ -171,7 +180,8 @@
   tier_rationale: "Growing fast. golang:alpine is the standard CI build image for Go projects."
 
 - name: openjdk
-  dockerfile: images/openjdk/21/Dockerfile
+  source:
+    dockerfile: images/openjdk/21/Dockerfile
   registry: ghcr.io/cascadeguard
   image: openjdk
   tag: 21-slim
