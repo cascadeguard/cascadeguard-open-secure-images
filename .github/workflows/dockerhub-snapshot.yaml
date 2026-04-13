@@ -1,0 +1,263 @@
+# CascadeGuard — Docker Hub Pull Count Snapshot
+#
+# Runs weekly to snapshot Docker Hub pull counts for all enrolled images.
+# Computes weekly delta (current snapshot minus previous ~7-day snapshot)
+# and stores both snapshot and delta data as JSON state files in this repo.
+#
+# State files (committed to main on every run):
+#   data/dockerhub-snapshots/YYYY-MM-DD.json   — raw pull counts per image
+#   data/dockerhub-weekly-downloads.json        — latest weekly deltas (queryable)
+#
+# Docker Hub public API: GET https://hub.docker.com/v2/repositories/{ns}/{name}/
+# Rate limit: ~180 unauthenticated req/min → 400 ms inter-request pacing.
+
+name: Docker Hub Pull Count Snapshot
+
+on:
+  schedule:
+    # Run every Monday at 08:00 UTC (after daily scan at 06:00 and tag check at 07:00)
+    - cron: "0 8 * * 1"
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Dry run — fetch counts and compute deltas but do not commit"
+        required: false
+        default: "false"
+
+permissions:
+  contents: write
+
+jobs:
+  snapshot:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          ref: main
+
+      - name: Set up Python
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: pip install --quiet PyYAML
+
+      - name: Run snapshot
+        id: snapshot
+        env:
+          DRY_RUN: ${{ github.event.inputs.dry_run || 'false' }}
+        run: |
+          python - <<'PYEOF'
+          import json
+          import os
+          import glob
+          import sys
+          import time
+          import urllib.request
+          import urllib.error
+          from datetime import datetime, timezone, timedelta
+          from pathlib import Path
+
+          import yaml
+
+          DOCKERHUB_API_BASE = "https://hub.docker.com/v2/repositories"
+          REQUEST_DELAY_S = 0.4
+          MAX_RETRIES = 3
+          BACKOFF_BASE_S = 2.0
+          DELTA_WINDOW_DAYS = 7
+          DELTA_TOLERANCE_DAYS = 2
+          SNAPSHOTS_DIR = Path("data/dockerhub-snapshots")
+          WEEKLY_FILE = Path("data/dockerhub-weekly-downloads.json")
+
+          # ── Load image list ────────────────────────────────────────────────────
+
+          with open("images.yaml") as f:
+              images = yaml.safe_load(f)
+
+          targets = []
+          for img in images:
+              name = img.get("name")
+              namespace = img.get("namespace", "library")
+              if name and namespace:
+                  targets.append({"namespace": namespace, "name": name})
+
+          print(f"Loaded {len(targets)} images from images.yaml")
+
+          # ── Fetch pull counts ──────────────────────────────────────────────────
+
+          def fetch_pull_count(namespace, name):
+              url = f"{DOCKERHUB_API_BASE}/{namespace}/{name}/"
+              last_err = None
+              for attempt in range(MAX_RETRIES + 1):
+                  if attempt > 0:
+                      backoff = BACKOFF_BASE_S * (2 ** (attempt - 1))
+                      print(f"  Retry {attempt}/{MAX_RETRIES} after {backoff:.0f}s backoff ...", flush=True)
+                      time.sleep(backoff)
+                  try:
+                      req = urllib.request.Request(url, headers={"User-Agent": "CascadeGuard/1.0"})
+                      with urllib.request.urlopen(req, timeout=30) as resp:
+                          data = json.loads(resp.read())
+                          return int(data["pull_count"])
+                  except urllib.error.HTTPError as exc:
+                      last_err = exc
+                      if exc.code == 429 or exc.code >= 500:
+                          continue
+                      raise
+                  except Exception as exc:
+                      last_err = exc
+                      continue
+              raise RuntimeError(
+                  f"Failed to fetch {namespace}/{name} after {MAX_RETRIES} retries: {last_err}"
+              )
+
+          now = datetime.now(timezone.utc)
+          snapshot_date = now.strftime("%Y-%m-%d")
+          snapshot_at = now.isoformat()
+
+          pull_counts = {}
+          errors = []
+
+          for i, img in enumerate(targets, 1):
+              ns, nm = img["namespace"], img["name"]
+              key = f"{ns}/{nm}"
+              print(f"[{i:02d}/{len(targets)}] Fetching {key} ...", flush=True)
+              try:
+                  count = fetch_pull_count(ns, nm)
+                  pull_counts[key] = count
+                  print(f"  pull_count = {count:,}")
+              except Exception as exc:
+                  errors.append({"image": key, "error": str(exc)})
+                  print(f"  ERROR: {exc}", file=sys.stderr)
+              if i < len(targets):
+                  time.sleep(REQUEST_DELAY_S)
+
+          print(f"\nFetched {len(pull_counts)}/{len(targets)} images. Errors: {len(errors)}")
+
+          # ── Save snapshot ──────────────────────────────────────────────────────
+
+          snapshot = {
+              "snapshot_at": snapshot_at,
+              "images": {k: {"pull_count": v} for k, v in pull_counts.items()},
+          }
+
+          if errors:
+              snapshot["errors"] = errors
+
+          SNAPSHOTS_DIR.mkdir(parents=True, exist_ok=True)
+          snapshot_path = SNAPSHOTS_DIR / f"{snapshot_date}.json"
+          with open(snapshot_path, "w") as f:
+              json.dump(snapshot, f, indent=2)
+              f.write("\n")
+          print(f"Saved snapshot: {snapshot_path}")
+
+          # ── Compute weekly delta ───────────────────────────────────────────────
+
+          target_dt = now - timedelta(days=DELTA_WINDOW_DAYS)
+          earliest_dt = now - timedelta(days=DELTA_WINDOW_DAYS + DELTA_TOLERANCE_DAYS)
+          latest_dt = now - timedelta(days=DELTA_WINDOW_DAYS - DELTA_TOLERANCE_DAYS)
+
+          # Find all existing snapshot files within the tolerance window
+          candidate = None
+          best_diff = None
+          for path in sorted(SNAPSHOTS_DIR.glob("*.json")):
+              if path == snapshot_path:
+                  continue
+              try:
+                  with open(path) as f:
+                      data = json.load(f)
+                  at_str = data.get("snapshot_at", "")
+                  at = datetime.fromisoformat(at_str)
+                  if earliest_dt <= at <= latest_dt:
+                      diff = abs((at - target_dt).total_seconds())
+                      if best_diff is None or diff < best_diff:
+                          best_diff = diff
+                          candidate = data
+              except Exception:
+                  continue
+
+          weekly_downloads = {}
+          if candidate:
+              prev_images = candidate.get("images", {})
+              for key, count in pull_counts.items():
+                  prev = prev_images.get(key, {}).get("pull_count")
+                  if prev is not None:
+                      weekly_downloads[key] = max(0, count - prev)
+              print(f"Computed weekly delta for {len(weekly_downloads)} images (prev snapshot: {candidate['snapshot_at']})")
+          else:
+              print("No prior snapshot found in 7±2 day window — skipping delta (first run or gap)")
+
+          # ── Save weekly downloads state file ───────────────────────────────────
+
+          weekly_state = {
+              "updated_at": snapshot_at,
+              "snapshot_date": snapshot_date,
+              "prior_snapshot_at": candidate["snapshot_at"] if candidate else None,
+              "weekly_downloads": weekly_downloads,
+          }
+          with open(WEEKLY_FILE, "w") as f:
+              json.dump(weekly_state, f, indent=2)
+              f.write("\n")
+          print(f"Saved weekly downloads: {WEEKLY_FILE}")
+
+          # ── Summary ────────────────────────────────────────────────────────────
+
+          with open(os.environ["GITHUB_STEP_SUMMARY"], "a") as s:
+              s.write(f"## Docker Hub Snapshot — {snapshot_date}\n\n")
+              s.write(f"| | Count |\n|---|---|\n")
+              s.write(f"| Images fetched | {len(pull_counts)} / {len(targets)} |\n")
+              s.write(f"| Images with delta | {len(weekly_downloads)} |\n")
+              s.write(f"| Errors | {len(errors)} |\n\n")
+              if weekly_downloads:
+                  s.write("### Weekly Downloads (top 10 by volume)\n\n")
+                  s.write("| Image | Weekly Downloads |\n|---|---|\n")
+                  top = sorted(weekly_downloads.items(), key=lambda x: x[1], reverse=True)[:10]
+                  for img, dl in top:
+                      s.write(f"| `{img}` | {dl:,} |\n")
+              if errors:
+                  s.write("\n### Errors\n\n")
+                  for e in errors:
+                      s.write(f"- `{e['image']}`: {e['error']}\n")
+
+          # Set output
+          with open(os.environ["GITHUB_OUTPUT"], "a") as out:
+              out.write(f"snapshot_date={snapshot_date}\n")
+              out.write(f"images_fetched={len(pull_counts)}\n")
+              out.write(f"images_with_delta={len(weekly_downloads)}\n")
+              out.write(f"error_count={len(errors)}\n")
+          PYEOF
+
+      - name: Commit and push state files
+        if: github.event.inputs.dry_run != 'true'
+        env:
+          SNAPSHOT_DATE: ${{ steps.snapshot.outputs.snapshot_date }}
+          IMAGES_FETCHED: ${{ steps.snapshot.outputs.images_fetched }}
+          IMAGES_WITH_DELTA: ${{ steps.snapshot.outputs.images_with_delta }}
+          ERROR_COUNT: ${{ steps.snapshot.outputs.error_count }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          git add data/dockerhub-snapshots/ data/dockerhub-weekly-downloads.json
+
+          if git diff --staged --quiet; then
+            echo "No changes to commit (snapshot already up to date)."
+            exit 0
+          fi
+
+          git commit -m "data(dockerhub): weekly pull count snapshot ${SNAPSHOT_DATE}
+
+          Fetched pull counts for ${IMAGES_FETCHED} images. Computed weekly
+          delta for ${IMAGES_WITH_DELTA} images. Errors: ${ERROR_COUNT}.
+
+          Co-Authored-By: Paperclip <noreply@paperclip.ing>"
+
+          git push origin main
+
+      - name: Summary (dry run notice)
+        if: github.event.inputs.dry_run == 'true'
+        run: |
+          echo "## Dry Run" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "State files were computed but **not committed** (dry_run=true)." >> $GITHUB_STEP_SUMMARY
