@@ -1,7 +1,9 @@
 # CascadeGuard — Build Workflow (Thin Wrapper)
 #
 # Delegates the full build pipeline to the reusable workflow in
-# cascadeguard-actions. This file only provides trigger config.
+# cascadeguard-actions. Runs on push to main (when image-related files
+# change) and on manual dispatch. PR validation is handled separately
+# by pr-check.yaml — we do NOT build every image on PRs.
 
 name: Build
 
@@ -13,14 +15,19 @@ on:
       - "shared/**"
       - "images.yaml"
       - ".github/workflows/**"
-  pull_request:
-    branches: [main]
   workflow_dispatch:
     inputs:
       image_filter:
         description: "Limit to a specific image name. Leave empty for all."
         required: false
         default: ""
+
+permissions:
+  contents: read
+  packages: write
+  id-token: write
+  security-events: write
+  attestations: write
 
 jobs:
   build:

@@ -1,0 +1,32 @@
+# CascadeGuard — PR Check Workflow
+#
+# Lightweight validation for pull requests. Runs CascadeGuard validate
+# (images.yaml schema/config checks) and actions policy enforcement.
+# Does NOT build images — that happens on push to main via build.yaml.
+
+name: PR Check
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  # ── CascadeGuard Validation ──────────────────────────────────────
+  validate:
+    name: Validate images.yaml
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+      - name: CascadeGuard validate
+        run: |
+          docker run --rm \
+            -v "${{ github.workspace }}:/workspace" \
+            ghcr.io/cascadeguard/cascadeguard:v0.1.0 \
+            validate
+
+  # ── Actions Policy Enforcement ───────────────────────────────────
+  policy:
+    uses: cascadeguard/cascadeguard-actions/.github/workflows/enforce-actions-policy.yaml@main
