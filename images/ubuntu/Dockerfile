@@ -1,7 +1,7 @@
 # CascadeGuard Hardened Ubuntu 22.04 LTS Base Image
 # https://github.com/cascadeguard/open-secure-images
 
-FROM ubuntu:22.04
+FROM ubuntu:22.04@sha256:eb29ed27b0821dca09c2e28b39135e185fc1302036427d5f4d70a41ce8fd7659
 
 LABEL maintainer="CascadeGuard <security@cascadeguard.dev>"
 LABEL org.opencontainers.image.title="cascadeguard/ubuntu"
