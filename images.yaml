@@ -179,11 +179,11 @@
   cve_count_approx: low
   tier_rationale: "Growing fast. golang:alpine is the standard CI build image for Go projects."
 
-- name: openjdk
+- name: eclipse-temurin
   source:
-    dockerfile: images/openjdk/21/Dockerfile
+    dockerfile: images/eclipse-temurin/21/Dockerfile
   registry: ghcr.io/cascadeguard
-  image: openjdk
+  image: eclipse-temurin
   tag: 21-slim
   namespace: library
   tier: free
