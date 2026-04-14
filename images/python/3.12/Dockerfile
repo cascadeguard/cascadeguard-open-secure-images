@@ -1,7 +1,7 @@
 # CascadeGuard Hardened Python 3.12 Base Image
 # https://github.com/cascadeguard/open-secure-images
 
-FROM python:3.12-slim AS build
+FROM python:3.12-slim@sha256:804ddf3251a60bbf9c92e73b7566c40428d54d0e79d3428194edf40da6521286 AS build
 
 LABEL maintainer="CascadeGuard <security@cascadeguard.dev>"
 LABEL org.opencontainers.image.title="cascadeguard/python"
