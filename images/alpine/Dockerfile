@@ -1,7 +1,7 @@
 # CascadeGuard Hardened Alpine Base Image
 # https://github.com/cascadeguard/open-secure-images
 
-FROM alpine:3.20 AS build
+FROM alpine:3.20@sha256:e9a2035f9d0d7cee1cdd445f5bfa0c5c646455ee26f14565dce23cf2d2de7570 AS build
 
 LABEL maintainer="CascadeGuard <security@cascadeguard.dev>"
 LABEL org.opencontainers.image.title="cascadeguard/alpine"
