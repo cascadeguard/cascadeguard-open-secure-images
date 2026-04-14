@@ -1,7 +1,7 @@
 # CascadeGuard Hardened Redis 7 Alpine Image
 # https://github.com/cascadeguard/open-secure-images
 
-FROM redis:7.4-alpine
+FROM redis:7.4-alpine@sha256:8b81dd37ff027bec4e516d41acfbe9fe2460070dc6d4a4570a2ac5b9d59df065
 
 LABEL maintainer="CascadeGuard <security@cascadeguard.dev>"
 LABEL org.opencontainers.image.title="cascadeguard/redis"
