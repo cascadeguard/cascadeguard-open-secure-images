@@ -1,7 +1,7 @@
 # CascadeGuard Hardened Go 1.22 Alpine Build Image
 # https://github.com/cascadeguard/open-secure-images
 
-FROM golang:1.22-alpine
+FROM golang:1.22-alpine@sha256:1699c10032ca2582ec89a24a1312d986a3f094aed3d5c1147b19880afe40e052
 
 LABEL maintainer="CascadeGuard <security@cascadeguard.dev>"
 LABEL org.opencontainers.image.title="cascadeguard/golang"
