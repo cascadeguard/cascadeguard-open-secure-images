@@ -1,7 +1,7 @@
 # CascadeGuard Hardened Nginx Base Image
 # https://github.com/cascadeguard/open-secure-images
 
-FROM nginx:stable-alpine-slim AS build
+FROM nginx:stable-alpine-slim@sha256:b33eedfdf089be1f83759ced27b4deec5b6f1b6fc2a6819ebce0ae351a4406e5 AS build
 
 LABEL maintainer="CascadeGuard <security@cascadeguard.dev>"
 LABEL org.opencontainers.image.title="cascadeguard/nginx"
