@@ -6,7 +6,7 @@
 # actively maintained successor published by the Eclipse Adoptium project.
 # See: https://hub.docker.com/_/openjdk (deprecation notice)
 
-FROM eclipse-temurin:21-jre-jammy
+FROM eclipse-temurin:21-jre-jammy@sha256:da196dd83cde2d23408db1ce69bfd4b64d6c4f5279f56dfe1ac55be32acca26d
 
 LABEL maintainer="CascadeGuard <security@cascadeguard.dev>"
 LABEL org.opencontainers.image.title="cascadeguard/openjdk"
