@@ -61,7 +61,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix: ${{ fromJson(needs.matrix.outputs.matrix) }}
-    uses: cascadeguard/cascadeguard-actions/.github/workflows/build-image.yaml@a2c4597db798af7e37b9cf01d14e786860f55b85 # main
+    uses: cascadeguard/cascadeguard-actions/.github/workflows/build-image.yaml@073fc982dea7fb6c06116b658cd21589e9bc8450 # main
     with:
       image_path: ${{ matrix.image_path }}
       image_name: ${{ matrix.image_name }}
