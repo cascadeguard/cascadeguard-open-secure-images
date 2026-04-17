@@ -27,4 +27,4 @@ jobs:
 
   # ── Actions Policy Enforcement ───────────────────────────────────
   policy:
-    uses: cascadeguard/cascadeguard-actions/.github/workflows/enforce-actions-policy.yaml@a2c4597db798af7e37b9cf01d14e786860f55b85 # main
+    uses: cascadeguard/cascadeguard-actions/.github/workflows/enforce-actions-policy.yaml@073fc982dea7fb6c06116b658cd21589e9bc8450 # main
