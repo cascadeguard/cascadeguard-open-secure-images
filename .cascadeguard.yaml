@@ -1,0 +1,6 @@
+# CascadeGuard configuration
+# See https://docs.cascadeguard.com/configuration
+
+cli:
+  # Pin to feat(CAS-564): multi-registry OCI tag fetching for ghcr.io and quay.io.
+  version: "a028744c4cf1733c5c1d5df725260f285eb1698c"

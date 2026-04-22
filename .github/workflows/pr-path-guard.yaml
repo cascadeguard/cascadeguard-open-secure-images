@@ -6,7 +6,7 @@
 # Uses the shared block-sensitive-paths action from cascadeguard-actions.
 # Other CascadeGuard public repos can reuse it with:
 #
-#   uses: cascadeguard/cascadeguard-actions/block-sensitive-paths@main
+#   uses: cascadeguard/cascadeguard-actions/block-sensitive-paths@510b0009b78df3114345cb907db6b026da79d7ab # main
 
 name: PR Path Guard
 
@@ -25,7 +25,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Block sensitive paths
-        uses: cascadeguard/cascadeguard-actions/block-sensitive-paths@main
+        uses: cascadeguard/cascadeguard-actions/block-sensitive-paths@510b0009b78df3114345cb907db6b026da79d7ab # main
         with:
           blocked-paths: |
             .ai/
