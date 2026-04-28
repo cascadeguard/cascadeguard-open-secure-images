@@ -14,6 +14,11 @@
 #
 # Schema follows cascadeguard-exemplar conventions:
 #   https://github.com/cascadeguard/cascadeguard-exemplar/blob/main/images.yaml
+#
+# Deprecation fields (added CAS-494):
+#   deprecated: true/false — whether Docker Hub has officially deprecated this image
+#   recommended_replacement: upstream-suggested replacement image (only set when deprecated: true)
+#   weekly_downloads: weekly pull count from Docker Hub (null = not yet populated)
 
 # ── Managed (10) ──────────────────────────────────────────────────────────────
 
@@ -33,6 +38,8 @@
     - "1.28-alpine"
     - "stable-alpine"
   cve_count_approx: low
+  deprecated: false
+  weekly_downloads: null
   tier_rationale: "#1 most pulled image on Docker Hub. Every web developer knows nginx. Highest visibility for CascadeGuard."
 
 - name: alpine
@@ -51,6 +58,8 @@
     - "3.23"
     - "3.22"
   cve_count_approx: very-low
+  deprecated: false
+  weekly_downloads: null
   tier_rationale: "Universal minimal base OS. Demonstrating alpine hardening is table-stakes for the CascadeGuard brand."
 
 - name: ubuntu
@@ -69,6 +78,8 @@
     - "22.04"
     - "20.04"
   cve_count_approx: medium
+  deprecated: false
+  weekly_downloads: null
   tier_rationale: "Most widely used Linux distro. ubuntu:22.04 LTS is the enterprise standard base image."
 
 - name: python
@@ -87,6 +98,8 @@
     - "3.11-slim"
     - "3.12-alpine"
   cve_count_approx: medium
+  deprecated: false
+  weekly_downloads: null
   tier_rationale: "3rd most pulled. Python is the dominant ML/AI runtime — huge audience for a hardened Python image."
 
 - name: postgres
@@ -105,6 +118,8 @@
     - "15"
     - "14"
   cve_count_approx: medium
+  deprecated: false
+  weekly_downloads: null
   tier_rationale: "2nd most pulled database. Default DB for most cloud-native stacks."
 
 - name: redis
@@ -123,6 +138,8 @@
     - "7.4"
     - "7.4-alpine"
   cve_count_approx: low
+  deprecated: false
+  weekly_downloads: null
   tier_rationale: "Ubiquitous cache layer. redis:alpine is already minimal; hardened version adds value."
 
 - name: node
@@ -141,6 +158,8 @@
     - "20-slim"
     - "22-alpine"
   cve_count_approx: medium-high
+  deprecated: false
+  weekly_downloads: null
   tier_rationale: "Default runtime for JS/TS backends. node:slim is widely used; hardened distroless variant is compelling."
 
 - name: mysql
@@ -159,6 +178,8 @@
     - "8.4"
     - "8.0"
   cve_count_approx: medium
+  deprecated: false
+  weekly_downloads: null
   tier_rationale: "Most recognised database brand. Hardened mysql image addresses a real enterprise gap."
 
 - name: golang
@@ -177,6 +198,8 @@
     - "1.22-bookworm"
     - "1.21-alpine"
   cve_count_approx: low
+  deprecated: false
+  weekly_downloads: null
   tier_rationale: "Growing fast. golang:alpine is the standard CI build image for Go projects."
 
 - name: eclipse-temurin
@@ -195,6 +218,9 @@
     - "17-slim"
     - "21-jre-slim"
   cve_count_approx: medium
+  deprecated: true
+  recommended_replacement: "eclipse-temurin:21-jre-jammy"
+  weekly_downloads: null
   tier_rationale: "Java runtime is mandatory for enterprise. openjdk:21 LTS is the current long-term target."
 
 # ── Upstream tracked (15) ─────────────────────────────────────────────────────
@@ -212,6 +238,8 @@
     - "1.6"
     - "1.6-alpine"
   cve_count_approx: low
+  deprecated: false
+  weekly_downloads: null
   tier_rationale: "Highest pull count of any registered-tier image but low star count signals automated pulls over developer community interest."
 
 - name: httpd
@@ -225,6 +253,8 @@
     - "2.4"
     - "2.4-alpine"
   cve_count_approx: medium
+  deprecated: false
+  weekly_downloads: null
   tier_rationale: "Apache httpd — legacy but still widely deployed. Good comparison target alongside nginx."
 
 - name: mongo
@@ -239,6 +269,8 @@
     - "6.0"
     - "7.0-jammy"
   cve_count_approx: medium-high
+  deprecated: false
+  weekly_downloads: null
   tier_rationale: "Popular NoSQL DB. High pull count but commercial licensing concerns make registered-tier appropriate."
 
 - name: rabbitmq
@@ -253,6 +285,8 @@
     - "4.0-alpine"
     - "3.13-management"
   cve_count_approx: medium
+  deprecated: false
+  weekly_downloads: null
   tier_rationale: "Dominant OSS message broker. Registered tier demonstrates queue infrastructure hardening."
 
 - name: traefik
@@ -267,6 +301,8 @@
     - "v2.11"
     - "v3.2-alpine"
   cve_count_approx: low
+  deprecated: false
+  weekly_downloads: null
   tier_rationale: "Modern cloud-native reverse proxy/ingress. Growing fast; hardened traefik is compelling for k8s users."
 
 - name: mariadb
@@ -281,6 +317,8 @@
     - "10.11"
     - "11.4-jammy"
   cve_count_approx: medium
+  deprecated: false
+  weekly_downloads: null
   tier_rationale: "MySQL-compatible fork. Registered tier since mysql covers the primary use case in free tier."
 
 - name: grafana
@@ -295,6 +333,8 @@
     - "10.4.0"
     - "10.3.0"
   cve_count_approx: medium
+  deprecated: false
+  weekly_downloads: null
   tier_rationale: "Standard observability dashboard. Non-library namespace; registered tier appropriate."
 
 - name: php
@@ -309,6 +349,8 @@
     - "8.2-fpm-alpine"
     - "8.3-cli-alpine"
   cve_count_approx: high
+  deprecated: false
+  weekly_downloads: null
   tier_rationale: "Massive legacy install base. CVE surface makes it a prime hardening showcase for registered users."
 
 - name: ruby
@@ -323,6 +365,8 @@
     - "3.2-alpine"
     - "3.3-alpine"
   cve_count_approx: medium
+  deprecated: false
+  weekly_downloads: null
   tier_rationale: "Rails ecosystem still significant. Complements the runtime catalog alongside python and node."
 
 - name: prometheus
@@ -337,6 +381,8 @@
     - "v2.51.0"
     - "v2.50.0"
   cve_count_approx: low
+  deprecated: false
+  weekly_downloads: null
   tier_rationale: "Paired with grafana in the observability stack. Non-library namespace; registered tier."
 
 - name: elasticsearch
@@ -351,6 +397,8 @@
     - "7.17.0"
     - "8.12.0"
   cve_count_approx: medium-high
+  deprecated: false
+  weekly_downloads: null
   tier_rationale: "Enterprise search/logging stack. Elastic licensing changes make registered tier appropriate."
 
 - name: haproxy
@@ -365,6 +413,8 @@
     - "2.9"
     - "3.0-alpine"
   cve_count_approx: low
+  deprecated: false
+  weekly_downloads: null
   tier_rationale: "Proven load balancer used at scale. Lower community interest but high operational relevance."
 
 - name: tomcat
@@ -379,6 +429,8 @@
     - "9.0"
     - "10.1-jre21"
   cve_count_approx: medium
+  deprecated: false
+  weekly_downloads: null
   tier_rationale: "Java servlet container; heavy in enterprise Java shops. Complements openjdk in the free tier."
 
 - name: consul
@@ -393,6 +445,8 @@
     - "1.17"
     - "1.18.1"
   cve_count_approx: low
+  deprecated: false
+  weekly_downloads: null
   tier_rationale: "HashiCorp service mesh/discovery. Registered tier due to lower pull count vs vault and narrower audience."
 
 - name: vault
@@ -407,4 +461,6 @@
     - "1.15"
     - "1.16.1"
   cve_count_approx: low
+  deprecated: false
+  weekly_downloads: null
   tier_rationale: "HashiCorp secrets manager. Lower absolute pulls but high enterprise value. BSL license shift reduces free-tier appeal."
